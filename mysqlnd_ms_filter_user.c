@@ -48,7 +48,7 @@
 #define MS_STRINGL(vl, ln, a)				\
 {											\
 	MAKE_STD_ZVAL((a));						\
-	ZVAL_STRINGL((a), (char *)(vl), (ln), 1);	\
+	ZVAL_STRINGL((a), (char *)(vl), (ln));	\
 }
 
 #define MS_ARRAY(a)		\

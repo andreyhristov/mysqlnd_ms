@@ -111,7 +111,7 @@ mysqlnd_ms_rr_filter_ctor(struct st_mysqlnd_ms_config_json_entry * section, zend
 
 		zend_hash_init(&ret->master_context, 4, NULL/*hash*/, mysqlnd_ms_filter_rr_context_dtor, persistent);
 		zend_hash_init(&ret->slave_context, 4, NULL/*hash*/, mysqlnd_ms_filter_rr_context_dtor, persistent);
-		zend_hash_init(&ret->lb_weight, 4, NULL/*hash*/, mysqlnd_ms_filter_lb_weigth_dtor, persistent);
+		zend_hash_init(&ret->lb_weight, 4, NULL/*hash*/, mysqlnd_ms_filter_lb_weight_dtor, persistent);
 
 		/* roundrobin => array(weights  => array(name => w, ... )) */
 		if (section &&
@@ -150,7 +150,7 @@ static MYSQLND_MS_FILTER_RR_CONTEXT *
 mysqlnd_ms_choose_connection_rr_fetch_context(HashTable * rr_contexts, zend_llist * connections, HashTable * lb_weights_list TSRMLS_DC)
 {
 	MYSQLND_MS_FILTER_RR_CONTEXT * ret_context = NULL;
-	smart_str fprint = {0};
+	smart_string fprint = {0};
 
 	DBG_ENTER("mysqlnd_ms_choose_connection_rr_fetch_context");
 
@@ -168,7 +168,7 @@ mysqlnd_ms_choose_connection_rr_fetch_context(HashTable * rr_contexts, zend_llis
 			/* fetch ptr to the data inside the HT */
 			retval = zend_hash_find(rr_contexts, fprint.c, fprint.len /*\0 counted*/, (void**)&ret_context);
 		}
-		smart_str_free(&fprint);
+		smart_string_free(&fprint);
 		if (SUCCESS != retval) {
 			DBG_RETURN(NULL);
 		}
@@ -181,7 +181,7 @@ mysqlnd_ms_choose_connection_rr_fetch_context(HashTable * rr_contexts, zend_llis
 			DBG_INF_FMT("Sort list has %d elements", zend_llist_count(&ret_context->weight_list));
 		}
 	} else {
-		smart_str_free(&fprint);
+		smart_string_free(&fprint);
 	}
 	DBG_INF_FMT("context=%p", ret_context);
 	DBG_RETURN(ret_context);
@@ -344,7 +344,7 @@ mysqlnd_ms_choose_connection_rr_use_slave(zend_llist * master_connections,
 			connection = element->conn;
 		}
 		if (connection) {
-			smart_str fprint_conn = {0};
+			smart_string fprint_conn = {0};
 			DBG_INF_FMT("Using slave connection "MYSQLND_LLU_SPEC"", connection->thread_id);
 
 			/* Check if this connection has already been marked failed */
@@ -352,7 +352,7 @@ mysqlnd_ms_choose_connection_rr_use_slave(zend_llist * master_connections,
 				zend_bool * failed;
 				mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
 				if (SUCCESS == zend_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
-					smart_str_free(&fprint_conn);
+					smart_string_free(&fprint_conn);
 					DBG_INF("Skipping previously failed connection");
 					continue;
 				}
@@ -362,7 +362,7 @@ mysqlnd_ms_choose_connection_rr_use_slave(zend_llist * master_connections,
 				MYSQLND_MS_INC_STATISTIC(MS_STAT_USE_SLAVE);
 				SET_EMPTY_ERROR(MYSQLND_MS_ERROR_INFO(connection));
 				if (fprint_conn.c) {
-					smart_str_free(&fprint_conn);
+					smart_string_free(&fprint_conn);
 				}
 				/* Real Success !! */
 				DBG_RETURN(connection);
@@ -376,7 +376,7 @@ mysqlnd_ms_choose_connection_rr_use_slave(zend_llist * master_connections,
 				}
 			}
 			if (fprint_conn.c) {
-				smart_str_free(&fprint_conn);
+				smart_string_free(&fprint_conn);
 			}
 		}
 		/* if we are here, we had some kind of a problem, either !connection or establishment failed */
@@ -489,12 +489,12 @@ mysqlnd_ms_choose_connection_rr_use_master(zend_llist * master_connections,
 		*pos = ((*pos) + 1) % zend_llist_count(l);
 
 		if (connection) {
-			smart_str fprint_conn = {0};
+			smart_string fprint_conn = {0};
 
 			if (stgy->failover_remember_failed) {
 				mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
 				if (zend_hash_exists(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/)) {
-					smart_str_free(&fprint_conn);
+					smart_string_free(&fprint_conn);
 					DBG_INF("Skipping previously failed connection");
 					continue;
 				}
@@ -503,7 +503,7 @@ mysqlnd_ms_choose_connection_rr_use_master(zend_llist * master_connections,
 				MYSQLND_MS_INC_STATISTIC(MS_STAT_USE_MASTER);
 				SET_EMPTY_ERROR(MYSQLND_MS_ERROR_INFO(connection));
 				if (fprint_conn.c) {
-					smart_str_free(&fprint_conn);
+					smart_string_free(&fprint_conn);
 				}
 				DBG_RETURN(connection);
 			}
@@ -515,7 +515,7 @@ mysqlnd_ms_choose_connection_rr_use_master(zend_llist * master_connections,
 				}
 			}
 			if (fprint_conn.c) {
-				smart_str_free(&fprint_conn);
+				smart_string_free(&fprint_conn);
 			}
 		}
 		if ((SERVER_FAILOVER_LOOP == stgy->failover_strategy) &&

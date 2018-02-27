@@ -21,13 +21,13 @@
 #ifndef MYSQLND_MS_CONN_POOL_H
 #define MYSQLND_MS_CONN_POOL_H
 
-#ifndef SMART_STR_START_SIZE
-#define SMART_STR_START_SIZE 1024
+#ifndef SMART_STRING_START_SIZE
+#define SMART_STRING_START_SIZE 1024
 #endif
-#ifndef SMART_STR_PREALLOC
-#define SMART_STR_PREALLOC 256
+#ifndef SMART_STRING_PREALLOC
+#define SMART_STRING_PREALLOC 256
 #endif
-#include "ext/standard/php_smart_str.h"
+#include "ext/standard/php_smart_string.h"
 #include "Zend/zend_llist.h"
 #include "Zend/zend_hash.h"
 
@@ -200,7 +200,7 @@ typedef struct st_mysqlnd_pool
 	 * we risk identical hash keys if the same server is used for multiple roles.
 	 * The latter is not forbidden. In fact, it is a feature heavily used by the tests.
 	 */
-	void (*get_conn_hash_key)(smart_str * hash_key /* out */,
+	void (*get_conn_hash_key)(smart_string * hash_key /* out */,
 							const char * const unique_name_from_config,
 							const char * const host,
 							const char * const user,
@@ -213,13 +213,13 @@ typedef struct st_mysqlnd_pool
 
 	/* Add connections to the pool */
 	enum_func_status (*add_slave)(struct st_mysqlnd_pool * pool,
-								  smart_str * hash_key,
+								  smart_string * hash_key,
 								  MYSQLND_MS_LIST_DATA * data,
 								  zend_bool persistent
 								  TSRMLS_DC);
 
 	enum_func_status (*add_master)(struct st_mysqlnd_pool * pool,
-								   smart_str * hash_key,
+								   smart_string * hash_key,
 								   MYSQLND_MS_LIST_DATA * data,
 								   zend_bool persistent
 								   TSRMLS_DC);
@@ -229,7 +229,7 @@ typedef struct st_mysqlnd_pool
 	 * A connection can be reactivated if is_active = FALSE, is_removed = FALSE
 	 */
 	zend_bool (*connection_exists)(struct st_mysqlnd_pool * pool,
-								   smart_str * hash_key,
+								   smart_string * hash_key,
 								   MYSQLND_MS_LIST_DATA **data,
 								   zend_bool * is_master,
 								   zend_bool * is_active,
@@ -249,7 +249,7 @@ typedef struct st_mysqlnd_pool
 	 * Note: roles (master/slave) cannot change - saw no need, change if you like...
 	 */
 	enum_func_status (*connection_reactivate)(struct st_mysqlnd_pool * pool,
-									  		  smart_str * hash_key,
+									  		  smart_string * hash_key,
 											  zend_bool is_master
 											  TSRMLS_DC);
 
@@ -267,7 +267,7 @@ typedef struct st_mysqlnd_pool
 	 * can be actually removed prior to giving up.
 	 */
 	enum_func_status (*connection_remove)(struct st_mysqlnd_pool * pool,
-										  smart_str * hash_key,
+										  smart_string * hash_key,
 										  zend_bool is_master
 										  TSRMLS_DC);
 
@@ -373,7 +373,7 @@ typedef struct st_mysqlnd_pool_listener
 } MYSQLND_MS_POOL_LISTENER;
 
 
-MYSQLND_MS_POOL * mysqlnd_ms_pool_ctor(dtor_func_t ms_list_data_dtor, zend_bool persistent TSRMLS_DC);
+MYSQLND_MS_POOL * mysqlnd_ms_pool_ctor(llist_dtor_func_t ms_list_data_dtor, zend_bool persistent TSRMLS_DC);
 
 typedef struct st_mysqlnd_pool_entry
 {

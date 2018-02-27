@@ -32,13 +32,14 @@
 # endif
 #endif
 
-#ifndef SMART_STR_START_SIZE
-#define SMART_STR_START_SIZE 1024
+#ifndef SMART_STRING_START_SIZE
+#define SMART_STRING_START_SIZE 1024
 #endif
-#ifndef SMART_STR_PREALLOC
-#define SMART_STR_PREALLOC 256
+#ifndef SMART_STRING_PREALLOC
+#define SMART_STRING_PREALLOC 256
 #endif
-#include "ext/standard/php_smart_str.h"
+#include "ext/standard/php_smart_string.h"
+
 
 #include "ext/mysqlnd/mysqlnd.h"
 #include "ext/mysqlnd/mysqlnd_statistics.h"

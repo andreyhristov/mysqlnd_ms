@@ -76,7 +76,7 @@ static const struct st_specific_ctor_with_name specific_ctors[] =
 {
 	{PICK_RROBIN,		sizeof(PICK_RROBIN) - 1,		mysqlnd_ms_rr_filter_ctor,		SERVER_PICK_RROBIN,		FALSE},
 	{PICK_RANDOM,		sizeof(PICK_RANDOM) - 1,		mysqlnd_ms_random_filter_ctor,	SERVER_PICK_RANDOM,		FALSE},
-	{PICK_USER,			sizeof(PICK_USER) - 1,			mysqlnd_ms_user_filter_ctor,	SERVER_PICK_USER,		FALSE},
+//	{PICK_USER,			sizeof(PICK_USER) - 1,			mysqlnd_ms_user_filter_ctor,	SERVER_PICK_USER,		FALSE},
 	{PICK_USER_MULTI,	sizeof(PICK_USER_MULTI) - 1,	mysqlnd_ms_user_filter_ctor,	SERVER_PICK_USER_MULTI,	TRUE},
 #ifdef MYSQLND_MS_HAVE_FILTER_TABLE_PARTITION
 	{PICK_TABLE,		sizeof(PICK_TABLE) - 1,			mysqlnd_ms_table_filter_ctor,	SERVER_PICK_TABLE,		TRUE},
@@ -92,7 +92,7 @@ static void mysqlnd_ms_get_element_ptr(void * d, void * arg TSRMLS_DC)
 {
 	MYSQLND_MS_LIST_DATA * data = d? *(MYSQLND_MS_LIST_DATA **) d : NULL ;
 	char ptr_buf[SIZEOF_SIZE_T + 1];
-	smart_str * context = (smart_str *) arg;
+	smart_string * context = (smart_string *) arg;
 	DBG_ENTER("mysqlnd_ms_get_element_ptr");
 	DBG_INF_FMT("ptr=%p", data->conn);
 	if (data) {
@@ -105,7 +105,7 @@ static void mysqlnd_ms_get_element_ptr(void * d, void * arg TSRMLS_DC)
 #endif
 		ptr_buf[SIZEOF_SIZE_T] = '\0';
 		DBG_INF_FMT("data->conn=%p ptr_buf='%s'", data->conn, ptr_buf);
-		smart_str_appendl(context, ptr_buf, SIZEOF_SIZE_T);
+		smart_string_appendl(context, ptr_buf, SIZEOF_SIZE_T);
 	} else {
 		DBG_INF("No data!");
 	}
@@ -116,11 +116,11 @@ static void mysqlnd_ms_get_element_ptr(void * d, void * arg TSRMLS_DC)
 
 /* {{{ mysqlnd_ms_get_fingerprint */
 void
-mysqlnd_ms_get_fingerprint(smart_str * context, zend_llist * list TSRMLS_DC)
+mysqlnd_ms_get_fingerprint(smart_string * context, zend_llist * list TSRMLS_DC)
 {
 	DBG_ENTER("mysqlnd_ms_get_fingerprint");
 	zend_llist_apply_with_argument(list, mysqlnd_ms_get_element_ptr, context TSRMLS_CC);
-	smart_str_appendc(context, '\0');
+	smart_string_appendc(context, '\0');
 	DBG_INF_FMT("len=%d", context->len);
 	DBG_VOID_RETURN;
 }
@@ -129,11 +129,11 @@ mysqlnd_ms_get_fingerprint(smart_str * context, zend_llist * list TSRMLS_DC)
 
 /* {{{ mysqlnd_ms_get_fingerprint_connection */
 void
-mysqlnd_ms_get_fingerprint_connection(smart_str * context, MYSQLND_MS_LIST_DATA ** d TSRMLS_DC)
+mysqlnd_ms_get_fingerprint_connection(smart_string * context, MYSQLND_MS_LIST_DATA ** d TSRMLS_DC)
 {
 	DBG_ENTER("mysqlnd_ms_get_fingerprint_connection");
 	mysqlnd_ms_get_element_ptr((void *) d, (void *)context TSRMLS_CC);
-	smart_str_appendc(context, '\0');
+	smart_string_appendc(context, '\0');
 	DBG_INF_FMT("context=%s len=%d", context->c, context->len);
 	DBG_VOID_RETURN;
 }

@@ -36,12 +36,12 @@
 #include "mysqlnd_ms_config_json.h"
 
 
-/* {{{ mysqlnd_ms_filter_lb_weigth_dtor */
+/* {{{ mysqlnd_ms_filter_lb_weight_dtor */
 void
-mysqlnd_ms_filter_lb_weigth_dtor(void * pDest)
+mysqlnd_ms_filter_lb_weight_dtor(void * pDest)
 {
 	TSRMLS_FETCH();
-	DBG_ENTER("mysqlnd_ms_filter_lb_weigth_dtor");
+	DBG_ENTER("mysqlnd_ms_filter_lb_weight_dtor");
 /*
  * 	MYSQLND_MS_FILTER_LB_WEIGHT * element = pDest? *(MYSQLND_MS_FILTER_LB_WEIGHT **) pDest : NULL;
 
@@ -94,7 +94,7 @@ mysqlnd_ms_filter_ctor_load_weights_config(HashTable * lb_weights_list, const ch
 		char * current_subsection_name = NULL;
 		size_t current_subsection_name_len = 0;
 		int weight;
-		smart_str fprint_conn = {0};
+		smart_string fprint_conn = {0};
 
 		subsection = mysqlnd_ms_config_json_next_sub_section(section,
 															&current_subsection_name,
@@ -142,7 +142,7 @@ mysqlnd_ms_filter_ctor_load_weights_config(HashTable * lb_weights_list, const ch
 							MYSQLND_MS_ERROR_PREFIX " Failed to create internal weights lookup table for filter '%s'. Stopping", filter_name);
 					}
 
-					smart_str_free(&fprint_conn);
+					smart_string_free(&fprint_conn);
 				}
 			}
 		}
@@ -173,7 +173,7 @@ mysqlnd_ms_populate_weights_sort_list(HashTable * lb_weights_list,
 {
 	int retval = FAILURE;
 	MYSQLND_MS_FILTER_LB_WEIGHT * weight_entry;
-	smart_str fprint_conn = {0};
+	smart_string fprint_conn = {0};
 	MYSQLND_MS_FILTER_LB_WEIGHT_IN_CONTEXT * lb_weight_context;
 	MYSQLND_MS_LIST_DATA * element = NULL;
 
@@ -198,10 +198,10 @@ mysqlnd_ms_populate_weights_sort_list(HashTable * lb_weights_list,
 		}
 		if (SUCCESS != retval) {
 			DBG_INF_FMT("Failed to create sort list, fingerprint -%s- %d", fprint_conn.c, fprint_conn.len);
-			smart_str_free(&fprint_conn);
+			smart_string_free(&fprint_conn);
 			break;
 		}
-		smart_str_free(&fprint_conn);
+		smart_string_free(&fprint_conn);
 	END_ITERATE_OVER_SERVER_LIST;
 
 	DBG_RETURN(retval == SUCCESS? PASS:FAIL);

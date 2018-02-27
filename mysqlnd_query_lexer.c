@@ -5123,7 +5123,7 @@ YY_DECL
 	/* can't use `yylval` here because `yylval` is initialized by flex to `yylval_param` later */
 	zval * token_value = &yylval_param->zv;
 	const char ** kn = &(yylval_param->kn);
-	smart_str ** comment = &(yylval_param->comment);
+	smart_string ** comment = &(yylval_param->comment);
 	DBG_ENTER("my_lex_routine");
 
 
@@ -8097,7 +8097,7 @@ case 579:
 case 580:
 YY_RULE_SETUP
 #line 652 "mysqlnd_query_lexer.flex"
-{ ZVAL_STRINGL(token_value, yytext, yyleng, 1); DBG_INF("QC_TOKEN_STRING");	DBG_RETURN(QC_TOKEN_STRING); }
+{ ZVAL_STRINGL(token_value, yytext, yyleng); DBG_INF("QC_TOKEN_STRING");	DBG_RETURN(QC_TOKEN_STRING); }
 	YY_BREAK
 case 581:
 *yy_cp = yyg->yy_hold_char; /* undo effects of setting up yytext */
@@ -8121,14 +8121,14 @@ case 583:
 case 584:
 YY_RULE_SETUP
 #line 658 "mysqlnd_query_lexer.flex"
-{ ZVAL_STRINGL(token_value, yytext, yyleng, 1); DBG_INF("QC_TOKEN_STRING");	DBG_RETURN(QC_TOKEN_STRING); }
+{ ZVAL_STRINGL(token_value, yytext, yyleng); DBG_INF("QC_TOKEN_STRING");	DBG_RETURN(QC_TOKEN_STRING); }
 	YY_BREAK
 case 585:
 #line 660 "mysqlnd_query_lexer.flex"
 case 586:
 YY_RULE_SETUP
 #line 660 "mysqlnd_query_lexer.flex"
-{ ZVAL_STRINGL(token_value, yytext, yyleng, 1); DBG_INF("QC_TOKEN_STRING");	DBG_RETURN(QC_TOKEN_STRING); }
+{ ZVAL_STRINGL(token_value, yytext, yyleng); DBG_INF("QC_TOKEN_STRING");	DBG_RETURN(QC_TOKEN_STRING); }
 	YY_BREAK
 /* Operators */
 case 587:
@@ -8277,14 +8277,14 @@ YY_RULE_SETUP
 case 616:
 YY_RULE_SETUP
 #line 694 "mysqlnd_query_lexer.flex"
-{ ZVAL_STRINGL(token_value, yytext, yyleng, 1); DBG_INF("QC_TOKEN_IDENTIFIER"); DBG_RETURN(QC_TOKEN_IDENTIFIER); }
+{ ZVAL_STRINGL(token_value, yytext, yyleng); DBG_INF("QC_TOKEN_IDENTIFIER"); DBG_RETURN(QC_TOKEN_IDENTIFIER); }
 	YY_BREAK
 /* quoted identifier */
 case 617:
 YY_RULE_SETUP
 #line 697 "mysqlnd_query_lexer.flex"
 {
-									ZVAL_STRINGL(token_value, yytext + 1, yyleng - 2, 1);
+									ZVAL_STRINGL(token_value, yytext + 1, yyleng - 2);
 									DBG_INF("QC_TOKEN_IDENTIFIER");
 									DBG_RETURN(QC_TOKEN_IDENTIFIER);
 								}
@@ -8294,7 +8294,7 @@ case 618:
 YY_RULE_SETUP
 #line 704 "mysqlnd_query_lexer.flex"
 ;							{
-									ZVAL_STRINGL(token_value, yytext + 1, yyleng - 1, 1);
+									ZVAL_STRINGL(token_value, yytext + 1, yyleng - 1);
 									DBG_INF("QC_TOKEN_COMMENT");
 									DBG_RETURN(QC_TOKEN_COMMENT);
 								}
@@ -8303,7 +8303,7 @@ case 619:
 YY_RULE_SETUP
 #line 710 "mysqlnd_query_lexer.flex"
 {
-									ZVAL_STRINGL(token_value, yytext + 2, yyleng - 2, 1);
+									ZVAL_STRINGL(token_value, yytext + 2, yyleng - 2);
 									DBG_INF("QC_TOKEN_COMMENT");
 									DBG_RETURN(QC_TOKEN_COMMENT);
 								}
@@ -8321,7 +8321,7 @@ YY_RULE_SETUP
 										*comment = NULL;
 									}
 #endif
-									*comment = mnd_ecalloc(1, sizeof(smart_str));
+									*comment = mnd_ecalloc(1, sizeof(smart_string));
 
 									ZVAL_NULL(token_value);
 								}
@@ -8334,17 +8334,17 @@ YY_RULE_SETUP
 									DBG_INF("leaving COMMENT_MODE");
 									DBG_INF("QC_TOKEN_COMMENT");
 
-									smart_str_appendc(*comment, '\0');
+									smart_string_appendc(*comment, '\0');
 									/*
-									  we need to copy the smart_str by value before we set token_value
+									  we need to copy the smart_string by value before we set token_value
 									  because comment and token_value are the vary same thing (part of an union)
 									  if we write something to token_value we will lose comment;
 									*/
 									{
-										smart_str * ss_copy = *comment;
-										ZVAL_STRINGL(token_value, (*comment)->c, (*comment)->len, 1);
+										smart_string * ss_copy = *comment;
+										ZVAL_STRINGL(token_value, (*comment)->c, (*comment)->len);
 
-										smart_str_free(ss_copy);
+										smart_string_free(ss_copy);
 										mnd_efree(ss_copy);
 									}
 									DBG_INF_FMT("token_value is now:%s", Z_STRVAL_P(token_value));
@@ -8357,7 +8357,7 @@ case 622:
 YY_RULE_SETUP
 #line 754 "mysqlnd_query_lexer.flex"
 {
-									smart_str_appendc(*comment, yytext[0]);
+									smart_string_appendc(*comment, yytext[0]);
 								}
 	YY_BREAK
 /* the rest */
@@ -9590,7 +9590,7 @@ mysqlnd_qp_get_token(struct st_mysqlnd_query_scanner * scanner TSRMLS_DC)
 				break;
 			case IS_NULL:
 				if (lex_val.kn) {
-					ZVAL_STRING(&ret.value, lex_val.kn, 1);
+					ZVAL_STRING(&ret.value, lex_val.kn);
 				}
 				break;
 		}

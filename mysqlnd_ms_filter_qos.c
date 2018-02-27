@@ -208,8 +208,8 @@ mysqlnd_ms_qos_server_has_gtid(MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_DATA **
 		MS_TIME_SET(run_time);
 	}
 	do {
-		if ((PASS == MS_CALL_ORIGINAL_CONN_DATA_METHOD(send_query)(conn, sql, sql_len TSRMLS_CC)) &&
-			(PASS ==  MS_CALL_ORIGINAL_CONN_DATA_METHOD(reap_query)(conn TSRMLS_CC)) &&
+		if ((PASS == MS_CALL_ORIGINAL_CONN_DATA_METHOD(send_query)(conn, sql, sql_len, MYSQLND_SEND_QUERY_IMPLICIT, NULL, NULL TSRMLS_CC)) &&
+			(PASS ==  MS_CALL_ORIGINAL_CONN_DATA_METHOD(reap_query)(conn, MYSQLND_REAP_RESULT_IMPLICIT TSRMLS_CC)) &&
 #if PHP_VERSION_ID < 50600
 			(res = MS_CALL_ORIGINAL_CONN_DATA_METHOD(store_result)(conn TSRMLS_CC))
 #else
@@ -285,7 +285,7 @@ mysqlnd_ms_qos_server_get_lag_stage1(MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_D
 #endif
 	(*conn_data)->skip_ms_calls = TRUE;
 
-	ret = MS_CALL_ORIGINAL_CONN_DATA_METHOD(send_query)(conn, SHOW_SS_QUERY , sizeof(SHOW_SS_QUERY) - 1 TSRMLS_CC);
+	ret = MS_CALL_ORIGINAL_CONN_DATA_METHOD(send_query)(conn, SHOW_SS_QUERY, sizeof(SHOW_SS_QUERY) - 1, MYSQLND_SEND_QUERY_IMPLICIT, NULL, NULL TSRMLS_CC);
 
 	(*conn_data)->skip_ms_calls = FALSE;
 
@@ -478,7 +478,7 @@ mysqlnd_ms_choose_connection_qos(MYSQLND_CONN_DATA * conn, void * f_data, const 
 			*/
 			if ((QOS_OPTION_GTID == filter_data->option) && (USE_MASTER != mysqlnd_ms_qos_which_server(*query, *query_len, stgy TSRMLS_CC)))
 			{
-				smart_str sql = {0, 0, 0};
+				smart_string sql = {0, 0, 0};
 				zend_bool exit_loop = FALSE;
 
 				BEGIN_ITERATE_OVER_SERVER_LIST(element, slave_list)
@@ -499,11 +499,11 @@ mysqlnd_ms_choose_connection_qos(MYSQLND_CONN_DATA * conn, void * f_data, const 
 						if (!sql.c) {
 							char * pos = strstr((*conn_data)->global_trx.check_for_gtid, "#GTID");
 							if (pos) {
-							  	smart_str_appendl(&sql, (*conn_data)->global_trx.check_for_gtid,
+							  	smart_string_appendl(&sql, (*conn_data)->global_trx.check_for_gtid,
 												  pos - ((*conn_data)->global_trx.check_for_gtid));
-								smart_str_appends(&sql, filter_data->option_data.gtid);
-								smart_str_appends(&sql, (*conn_data)->global_trx.check_for_gtid + (pos - ((*conn_data)->global_trx.check_for_gtid)) + sizeof("#GTID") - 1);
-								smart_str_appendc(&sql, '\0');
+								smart_string_appends(&sql, filter_data->option_data.gtid);
+								smart_string_appends(&sql, (*conn_data)->global_trx.check_for_gtid + (pos - ((*conn_data)->global_trx.check_for_gtid)) + sizeof("#GTID") - 1);
+								smart_string_appendc(&sql, '\0');
 							} else {
 								mysqlnd_ms_client_n_php_error(NULL, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, E_WARNING TSRMLS_CC,
 										MYSQLND_MS_ERROR_PREFIX " Failed parse SQL for checking GTID. Cannot find #GTID placeholder");
@@ -527,7 +527,7 @@ mysqlnd_ms_choose_connection_qos(MYSQLND_CONN_DATA * conn, void * f_data, const 
 					}
 				END_ITERATE_OVER_SERVER_LIST;
 
-				smart_str_free(&sql);
+				smart_string_free(&sql);
 
 				BEGIN_ITERATE_OVER_SERVER_LIST(element, master_list)
 					zend_llist_add_element(selected_masters, &element);

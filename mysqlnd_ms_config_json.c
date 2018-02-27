@@ -159,8 +159,18 @@ mysqlnd_ms_add_zval_to_hash(zval * zv, HashTable * ht, const char * skey, size_t
 				MYSQLND_MS_WARN_OOM();
 			}
 			break;
-		case IS_BOOL:
+		case IS_FALSE:
+		case IS_TRUE:
 			DBG_INF("boolean");
+			new_entry = mnd_calloc(1, sizeof(struct st_mysqlnd_ms_config_json_entry));
+			if (new_entry) {
+				new_entry->type = IS_LONG;
+				new_entry->value.lval = Z_TYPE_P(zv) == IS_TRUE? 1:0;
+				DBG_INF_FMT("lval="MYSQLND_LL_SPEC, (long long) new_entry->value.lval);
+			} else {
+				MYSQLND_MS_WARN_OOM();
+			}
+			break;
 		case IS_LONG:
 			new_entry = mnd_calloc(1, sizeof(struct st_mysqlnd_ms_config_json_entry));
 			if (new_entry) {

@@ -260,7 +260,7 @@ pool_clear_all(MYSQLND_MS_POOL * pool, unsigned int * referenced TSRMLS_DC)
 
 /* {{{ pool_get_conn_hash_key */
 static void
-pool_get_conn_hash_key(smart_str * hash_key,
+pool_get_conn_hash_key(smart_string * hash_key,
 						const char * const unique_name_from_config,
 						const char * const host,
 						const char * const user,
@@ -279,40 +279,40 @@ pool_get_conn_hash_key(smart_str * hash_key,
 	 * We need to get started...
 	 */
 	if (unique_name_from_config) {
-		smart_str_appendl(hash_key, unique_name_from_config, strlen(unique_name_from_config));
+		smart_string_appendl(hash_key, unique_name_from_config, strlen(unique_name_from_config));
 	}
-	smart_str_appendc(hash_key, '|');
+	smart_string_appendc(hash_key, '|');
 	if (host) {
-		smart_str_appendl(hash_key, host, strlen(host));
+		smart_string_appendl(hash_key, host, strlen(host));
 	}
-	smart_str_appendc(hash_key, '|');
+	smart_string_appendc(hash_key, '|');
 	if (user) {
-		smart_str_appendl(hash_key, user, strlen(user));
+		smart_string_appendl(hash_key, user, strlen(user));
 	}
 	/*
 	  We add an additional char to create a combo that is not easily found in passwords.
 	  This way a password with only `|` won't create similar hash key to password without `|`
 	*/
-	smart_str_appendc(hash_key, '|');
-	smart_str_appendc(hash_key, '^');
+	smart_string_appendc(hash_key, '|');
+	smart_string_appendc(hash_key, '^');
 	if (passwd && passwd_len) {
-		smart_str_appendl(hash_key, passwd, passwd_len);
+		smart_string_appendl(hash_key, passwd, passwd_len);
 	}
-	smart_str_appendc(hash_key, '^');
-	smart_str_appendc(hash_key, '|');
+	smart_string_appendc(hash_key, '^');
+	smart_string_appendc(hash_key, '|');
 	if (socket) {
-		smart_str_appendl(hash_key, socket, strlen(socket));
+		smart_string_appendl(hash_key, socket, strlen(socket));
 	}
-	smart_str_appendc(hash_key, '|');
-	smart_str_append_unsigned(hash_key, port);
-	smart_str_appendc(hash_key, '|');
+	smart_string_appendc(hash_key, '|');
+	smart_string_append_unsigned(hash_key, port);
+	smart_string_appendc(hash_key, '|');
 	if (db && db_len) {
-		smart_str_appendl(hash_key, db, db_len);
+		smart_string_appendl(hash_key, db, db_len);
 	}
-	smart_str_appendc(hash_key, '|');
-	smart_str_append_unsigned(hash_key, connect_flags);
-	smart_str_appendc(hash_key, '|');
-	smart_str_appendc(hash_key, '\0');
+	smart_string_appendc(hash_key, '|');
+	smart_string_append_unsigned(hash_key, connect_flags);
+	smart_string_appendc(hash_key, '|');
+	smart_string_appendc(hash_key, '\0');
 }
 /* }}} */
 
@@ -327,7 +327,7 @@ pool_init_pool_hash_key(MYSQLND_MS_LIST_DATA * data)
 
 	/* Note, accessing "private" MS_LIST_DATA contents */
 	if (data->pool_hash_key.len) {
-		smart_str_free(&(data->pool_hash_key));
+		smart_string_free(&(data->pool_hash_key));
 	}
 	pool_get_conn_hash_key(&(data->pool_hash_key),
 							data->name_from_config,
@@ -339,7 +339,7 @@ pool_init_pool_hash_key(MYSQLND_MS_LIST_DATA * data)
 
 /* {{{ pool_add_slave */
 static enum_func_status
-pool_add_slave(MYSQLND_MS_POOL * pool, smart_str * hash_key,
+pool_add_slave(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 			   MYSQLND_MS_LIST_DATA * data, zend_bool persistent TSRMLS_DC)
 {
 	enum_func_status ret = PASS;
@@ -392,7 +392,7 @@ pool_add_slave(MYSQLND_MS_POOL * pool, smart_str * hash_key,
 
 /* {{{ pool_add_master */
 static enum_func_status
-pool_add_master(MYSQLND_MS_POOL * pool, smart_str * hash_key,
+pool_add_master(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 				MYSQLND_MS_LIST_DATA * data, zend_bool persistent TSRMLS_DC)
 {
 	enum_func_status ret = PASS;
@@ -447,7 +447,7 @@ pool_add_master(MYSQLND_MS_POOL * pool, smart_str * hash_key,
 
 /* {{{ pool_connection_exists */
 static zend_bool
-pool_connection_exists(MYSQLND_MS_POOL * pool, smart_str * hash_key,
+pool_connection_exists(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 					   MYSQLND_MS_LIST_DATA ** data,
 					   zend_bool * is_master, zend_bool * is_active,
 					   zend_bool * is_removed TSRMLS_DC)
@@ -494,7 +494,7 @@ pool_connection_exists(MYSQLND_MS_POOL * pool, smart_str * hash_key,
 
 /* {{{ pool_connection_reactivate */
 static enum_func_status
-pool_connection_reactivate(MYSQLND_MS_POOL * pool, smart_str * hash_key, zend_bool is_master TSRMLS_DC)
+pool_connection_reactivate(MYSQLND_MS_POOL * pool, smart_string * hash_key, zend_bool is_master TSRMLS_DC)
 {
 	enum_func_status ret = FAIL;
 	MYSQLND_MS_POOL_ENTRY ** pool_element;
@@ -540,7 +540,7 @@ pool_connection_reactivate(MYSQLND_MS_POOL * pool, smart_str * hash_key, zend_bo
 
 /* {{{ pool_register_replace_listener */
 static enum_func_status
-pool_connection_remove(MYSQLND_MS_POOL * pool, smart_str * hash_key, zend_bool is_master TSRMLS_DC)
+pool_connection_remove(MYSQLND_MS_POOL * pool, smart_string * hash_key, zend_bool is_master TSRMLS_DC)
 {
 	enum_func_status ret = FAIL;
 	MYSQLND_MS_POOL_ENTRY ** pool_element;
@@ -1344,8 +1344,11 @@ pool_get_active_slaves(MYSQLND_MS_POOL * pool TSRMLS_DC)
 }
 /* }}} */
 
+
+/* {{{ pool_dtor */
 static void
-pool_dtor(MYSQLND_MS_POOL * pool TSRMLS_DC) {
+pool_dtor(MYSQLND_MS_POOL * pool TSRMLS_DC)
+{
 	DBG_ENTER("mysqlnd_ms::pool_dtor");
 
 	if (pool) {
@@ -1363,9 +1366,13 @@ pool_dtor(MYSQLND_MS_POOL * pool TSRMLS_DC) {
 	}
 	DBG_VOID_RETURN;
 }
+/* }}} */
 
 
-MYSQLND_MS_POOL * mysqlnd_ms_pool_ctor(llist_dtor_func_t ms_list_data_dtor, zend_bool persistent TSRMLS_DC) {
+/* {{{ mysqlnd_ms_pool_ctor */
+MYSQLND_MS_POOL *
+mysqlnd_ms_pool_ctor(llist_dtor_func_t ms_list_data_dtor, zend_bool persistent TSRMLS_DC)
+{
 	DBG_ENTER("mysqlnd_ms::pool_ctor");
 
 	MYSQLND_MS_POOL * pool = mnd_pecalloc(1, sizeof(MYSQLND_MS_POOL), persistent);
@@ -1424,6 +1431,7 @@ MYSQLND_MS_POOL * mysqlnd_ms_pool_ctor(llist_dtor_func_t ms_list_data_dtor, zend
 
 	DBG_RETURN(pool);
 }
+/* }}} */
 
 /*
  * Local variables:

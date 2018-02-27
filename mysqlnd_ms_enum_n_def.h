@@ -27,6 +27,14 @@
 #include "sys/time.h"
 #endif
 
+#ifndef SMART_STRING_START_SIZE
+#define SMART_STRING_START_SIZE 1024
+#endif
+#ifndef SMART_STRING_PREALLOC
+#define SMART_STRING_PREALLOC 256
+#endif
+#include "ext/standard/php_smart_string.h"
+
 #include "fabric/mysqlnd_fabric.h"
 
 #if MYSQLND_VERSION_ID < 50010 && !defined(MYSQLND_CONN_DATA_DEFINED)
@@ -433,7 +441,7 @@ typedef struct st_mysqlnd_ms_list_data
 {
 	/* hash_key should be the only case where we break
 	 * encapsulation between core and pool */
-	smart_str pool_hash_key;
+	smart_string pool_hash_key;
 
 	char * name_from_config;
 	MYSQLND_CONN_DATA * conn;

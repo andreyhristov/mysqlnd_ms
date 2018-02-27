@@ -186,7 +186,7 @@ PHP_MINIT_FUNCTION(mysqlnd_ms)
 	if (MYSQLND_MS_G(enable)) {
 		mysqlnd_ms_plugin_id = mysqlnd_plugin_register();
 		mysqlnd_ms_register_hooks();
-		mysqlnd_stats_init(&mysqlnd_ms_stats, MS_STAT_LAST);
+		mysqlnd_stats_init(&mysqlnd_ms_stats, MS_STAT_LAST, TRUE);
 
 		mysqlnd_ms_json_config = mysqlnd_ms_config_json_init(TSRMLS_C);
 	}
@@ -231,7 +231,7 @@ PHP_MSHUTDOWN_FUNCTION(mysqlnd_ms)
 {
 	UNREGISTER_INI_ENTRIES();
 	if (MYSQLND_MS_G(enable)) {
-		mysqlnd_stats_end(mysqlnd_ms_stats);
+		mysqlnd_stats_end(mysqlnd_ms_stats, TRUE);
 
 		mysqlnd_ms_config_json_free(mysqlnd_ms_json_config TSRMLS_CC);
 		mysqlnd_ms_json_config = NULL;
@@ -379,16 +379,16 @@ static PHP_FUNCTION(mysqlnd_ms_get_last_used_connection)
 		const MYSQLND_CONN_DATA * conn = (conn_data && (*conn_data) && (*conn_data)->stgy.last_used_conn)? (*conn_data)->stgy.last_used_conn:proxy_conn->data;
 
 		array_init(return_value);
-		add_assoc_string_ex(return_value, "scheme", sizeof("scheme"), conn->scheme? conn->scheme:"", 1);
-		add_assoc_string_ex(return_value, "host_info", sizeof("host_info"), conn->host_info? conn->host_info:"", 1);
-		add_assoc_string_ex(return_value, "host", sizeof("host"), conn->host? conn->host:"", 1);
+		add_assoc_string_ex(return_value, "scheme", sizeof("scheme"), conn->scheme? conn->scheme:"");
+		add_assoc_string_ex(return_value, "host_info", sizeof("host_info"), conn->host_info? conn->host_info:"");
+		add_assoc_string_ex(return_value, "host", sizeof("host"), conn->host? conn->host:"");
 		add_assoc_long_ex(return_value, "port", sizeof("port"), conn->port);
-		add_assoc_string_ex(return_value, "socket_or_pipe", sizeof("socket_or_pipe"), conn->unix_socket? conn->unix_socket:"", 1);
+		add_assoc_string_ex(return_value, "socket_or_pipe", sizeof("socket_or_pipe"), conn->unix_socket? conn->unix_socket:"");
 		add_assoc_long_ex(return_value, "thread_id", sizeof("thread_id"), conn->thread_id);
-		add_assoc_string_ex(return_value, "last_message", sizeof("last_message"), conn->last_message? conn->last_message:"", 1);
+		add_assoc_string_ex(return_value, "last_message", sizeof("last_message"), conn->last_message? conn->last_message:"");
 		add_assoc_long_ex(return_value, "errno", sizeof("errno"), MYSQLND_MS_ERROR_INFO(conn).error_no);
-		add_assoc_string_ex(return_value, "error", sizeof("error"), (char *) MYSQLND_MS_ERROR_INFO(conn).error, 1);
-		add_assoc_string_ex(return_value, "sqlstate", sizeof("sqlstate"), (char *) MYSQLND_MS_ERROR_INFO(conn).sqlstate, 1);
+		add_assoc_string_ex(return_value, "error", sizeof("error"), (char *) MYSQLND_MS_ERROR_INFO(conn).error);
+		add_assoc_string_ex(return_value, "sqlstate", sizeof("sqlstate"), (char *) MYSQLND_MS_ERROR_INFO(conn).sqlstate);
 	}
 }
 /* }}} */
@@ -416,8 +416,8 @@ static PHP_FUNCTION(mysqlnd_ms_get_last_gtid)
 	}
 	{
 		MYSQLND_RES * res = NULL;
-		zval * row;
-		zval ** gtid;
+		zval row;
+		zval * gtid;
 
 		conn_data = (MYSQLND_MS_CONN_DATA **) mysqlnd_plugin_get_plugin_connection_data_data(proxy_conn->data, mysqlnd_ms_plugin_id);
 		if (!conn_data || !(*conn_data)) {
@@ -443,11 +443,12 @@ static PHP_FUNCTION(mysqlnd_ms_get_last_gtid)
 		}
 
 		(*conn_data)->skip_ms_calls = TRUE;
-		if (PASS != MS_CALL_ORIGINAL_CONN_DATA_METHOD(send_query)(conn, (*conn_data)->global_trx.fetch_last_gtid, (*conn_data)->global_trx.fetch_last_gtid_len TSRMLS_CC)) {
+		if (PASS != MS_CALL_ORIGINAL_CONN_DATA_METHOD(send_query)(conn, (*conn_data)->global_trx.fetch_last_gtid, (*conn_data)->global_trx.fetch_last_gtid_len,
+																  MYSQLND_SEND_QUERY_IMPLICIT, NULL, NULL TSRMLS_CC)) {
 			goto getlastidfailure;
 		}
 
-		if (PASS !=  MS_CALL_ORIGINAL_CONN_DATA_METHOD(reap_query)(conn TSRMLS_CC)) {
+		if (PASS !=  MS_CALL_ORIGINAL_CONN_DATA_METHOD(reap_query)(conn, MYSQLND_REAP_RESULT_IMPLICIT TSRMLS_CC)) {
 			goto getlastidfailure;
 		}
 #if PHP_VERSION_ID < 50600
@@ -460,17 +461,16 @@ static PHP_FUNCTION(mysqlnd_ms_get_last_gtid)
 
 		(*conn_data)->skip_ms_calls = FALSE;
 
-		MAKE_STD_ZVAL(row);
-		mysqlnd_fetch_into(res, MYSQLND_FETCH_NUM, row, MYSQLND_MYSQL);
-		if (Z_TYPE_P(row) != IS_ARRAY) {
-			zval_ptr_dtor(&row);
+		mysqlnd_fetch_into(res, MYSQLND_FETCH_NUM, &row, MYSQLND_MYSQL);
+		if (Z_TYPE(row) != IS_ARRAY) {
+			zval_dtor(&row);
 			res->m.free_result(res, FALSE TSRMLS_CC);
 			goto getlastidfailure;
 		}
 
-		if (SUCCESS == zend_hash_index_find(Z_ARRVAL_P(row), 0, (void**)&gtid)) {
-			RETVAL_ZVAL(*gtid, 1, NULL);
-			zval_ptr_dtor(&row);
+		if ((gtid = zend_hash_index_find(Z_ARRVAL(row), 0))) {
+			RETVAL_ZVAL(gtid, 1, NULL);
+			zval_dtor(&row);
 			res->m.free_result(res, FALSE TSRMLS_CC);
 			return;
 		} else {
@@ -691,7 +691,7 @@ static void mysqlnd_ms_fabric_select_servers(zval *return_value, zval *conn_zv, 
 	MYSQLND_MS_CONN_DATA **conn_data = NULL;
 	mysqlnd_fabric_server *servers, *tofree;
 	mysqlnd_fabric *fabric;
-	smart_str hash_key = {0};
+	smart_string hash_key = {0};
 	unsigned int server_counter = 0;
 	zend_bool exists = FALSE, is_master = FALSE, is_active = FALSE, is_removed = FALSE;
 	MYSQLND_MS_LIST_DATA * data;
@@ -808,7 +808,7 @@ static void mysqlnd_ms_fabric_select_servers(zval *return_value, zval *conn_zv, 
 	}
 
 	mysqlnd_fabric_free_server_list(tofree);
-	smart_str_free(&hash_key);
+	smart_string_free(&hash_key);
 
 	/* FIXME - this will, almost for sure, replay too many commands. Note the filter argument */
 	(*conn_data)->pool->replay_cmds((*conn_data)->pool, proxy_conn->data, NULL /* filter */ TSRMLS_CC);
@@ -871,15 +871,15 @@ static void mysqlnd_ms_add_server_to_array(void *data, void *arg TSRMLS_DC) /* {
 	MAKE_STD_ZVAL(host);
 	array_init(host);
 	if ((*element)->name_from_config) {
-		add_assoc_string(host, "name_from_config", (*element)->name_from_config, 1);
+		add_assoc_string(host, "name_from_config", (*element)->name_from_config);
 	} else {
 		add_assoc_null(host, "name_from_config");
 	}
 
-	add_assoc_string(host, "hostname", (*element)->host, 1);
+	add_assoc_string(host, "hostname", (*element)->host);
 
 	if ((*element)->user) {
-		add_assoc_string(host, "user", (*element)->user, 1);
+		add_assoc_string(host, "user", (*element)->user);
 	} else {
 		add_assoc_null(host, "user");
 	}
@@ -887,7 +887,7 @@ static void mysqlnd_ms_add_server_to_array(void *data, void *arg TSRMLS_DC) /* {
 	add_assoc_long(host, "port", (*element)->port);
 
 	if ((*element)->socket) {
-		add_assoc_string(host, "socket", (*element)->socket, 1);
+		add_assoc_string(host, "socket", (*element)->socket);
 	} else {
 		add_assoc_null(host, "socket");
 	}
@@ -951,7 +951,7 @@ static void mysqlnd_ms_dump_fabric_hosts_cb(const char *url, void *data) /* {{{ 
 
 	MAKE_STD_ZVAL(item);
 	array_init(item);
-	add_assoc_string(item, "url", (char*)url, 1);
+	add_assoc_string(item, "url", (char*) url);
 	add_next_index_zval(return_value,  item);
 }
 /* }}} */

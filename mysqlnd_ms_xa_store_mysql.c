@@ -378,8 +378,8 @@ mysqlnd_ms_xa_store_mysql_monitor_change_state(void * data,
 	enum_func_status ret = PASS;
 	char * sql;
 	int sql_len;
-	smart_str state_to = {0, 0, 0};
-	smart_str state_intend = {0, 0, 0};
+	smart_string state_to = {0, 0, 0};
+	smart_string state_intend = {0, 0, 0};
 	MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data = (MYSQLND_MS_XA_STATE_STORE_MYSQL *)data;
 
 	DBG_ENTER("mysqlnd_ms_xa_store_mysql_monitor_change_state");
@@ -404,8 +404,8 @@ mysqlnd_ms_xa_store_mysql_monitor_change_state(void * data,
 						xa_id->store_id);
 	ret = mysqlnd_query(store_data->conn, sql, sql_len);
 	efree(sql);
-	smart_str_free(&state_to);
-	smart_str_free(&state_intend);
+	smart_string_free(&state_to);
+	smart_string_free(&state_intend);
 
 	if (PASS != ret) {
 		COPY_SQL_ERROR(store_data->conn, error_info);
@@ -430,7 +430,7 @@ mysqlnd_ms_xa_store_mysql_add_participant(void * data, MYSQLND_ERROR_INFO * erro
 	char * sql;
 	int sql_len;
 	char * host = NULL;
-	smart_str state = {0, 0, 0};
+	smart_string state = {0, 0, 0};
 	MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data = (MYSQLND_MS_XA_STATE_STORE_MYSQL *)data;
 
 	DBG_ENTER("mysqlnd_ms_xa_store_mysql_add_participant");
@@ -494,7 +494,7 @@ mysqlnd_ms_xa_store_mysql_add_participant(void * data, MYSQLND_ERROR_INFO * erro
 	/* autocommit is fine */
 	ret = mysqlnd_query(store_data->conn, sql, sql_len);
 	efree(sql);
-	smart_str_free(&state);
+	smart_string_free(&state);
 
 	if (PASS != ret) {
 		COPY_SQL_ERROR(store_data->conn, error_info);
@@ -517,7 +517,7 @@ mysqlnd_ms_xa_store_mysql_participant_change_state(void * data, MYSQLND_ERROR_IN
 	enum_func_status ret = FAIL;
 	char * sql;
 	int sql_len;
-	smart_str state_from = {0, 0, 0}, state_to = {0, 0, 0};
+	smart_string state_from = {0, 0, 0}, state_to = {0, 0, 0};
 	MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data = (MYSQLND_MS_XA_STATE_STORE_MYSQL *)data;
 
 	DBG_ENTER("mysqlnd_ms_xa_store_mysql_participant_change_state");
@@ -539,8 +539,8 @@ mysqlnd_ms_xa_store_mysql_participant_change_state(void * data, MYSQLND_ERROR_IN
 	/* autocommit */
 	ret = mysqlnd_query(store_data->conn, sql, sql_len);
 	efree(sql);
-	smart_str_free(&state_from);
-	smart_str_free(&state_to);
+	smart_string_free(&state_from);
+	smart_string_free(&state_to);
 
 	if (PASS != ret) {
 		COPY_SQL_ERROR(store_data->conn, error_info);
@@ -600,7 +600,7 @@ mysqlnd_ms_xa_store_mysql_monitor_failure(void * data, MYSQLND_ERROR_INFO * erro
 	char * sql;
 	int sql_len;
 	enum_func_status ret = FAIL;
-	smart_str state = {0, 0, 0};
+	smart_string state = {0, 0, 0};
 	MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data = (MYSQLND_MS_XA_STATE_STORE_MYSQL *)data;
 
 	DBG_ENTER("mysqlnd_ms_xa_store_mysql_monitor_failure");
@@ -619,7 +619,7 @@ mysqlnd_ms_xa_store_mysql_monitor_failure(void * data, MYSQLND_ERROR_INFO * erro
 	/* autocommit */
 	ret = mysqlnd_query(store_data->conn, sql, sql_len);
 	efree(sql);
-	smart_str_free(&state);
+	smart_string_free(&state);
 
 	if (PASS != ret) {
 		COPY_SQL_ERROR(store_data->conn, error_info);

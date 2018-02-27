@@ -78,33 +78,33 @@
 
 /* {{{ mysqlnd_ms_xa_state_to_string */
 void
-mysqlnd_ms_xa_state_to_string(enum mysqlnd_ms_xa_state state, smart_str * str)
+mysqlnd_ms_xa_state_to_string(enum mysqlnd_ms_xa_state state, smart_string * str)
 {
 	switch (state) {
 		case XA_NON_EXISTING:
-			smart_str_appendl(str, "XA_NON_EXISTING" , sizeof("XA_NON_EXISTING") - 1);
+			smart_string_appendl(str, "XA_NON_EXISTING" , sizeof("XA_NON_EXISTING") - 1);
 			break;
 		case XA_ACTIVE:
-			smart_str_appendl(str, "XA_ACTIVE", sizeof("XA_ACTIVE") - 1);
+			smart_string_appendl(str, "XA_ACTIVE", sizeof("XA_ACTIVE") - 1);
 			break;
 		case XA_IDLE:
-			smart_str_appendl(str, "XA_IDLE", sizeof("XA_IDLE") - 1);
+			smart_string_appendl(str, "XA_IDLE", sizeof("XA_IDLE") - 1);
 			break;
 		case XA_PREPARED:
-			smart_str_appendl(str, "XA_PREPARED", sizeof("XA_PREPARED") - 1);
+			smart_string_appendl(str, "XA_PREPARED", sizeof("XA_PREPARED") - 1);
 			break;
 		case XA_COMMIT:
-			smart_str_appendl(str, "XA_COMMIT", sizeof("XA_COMMIT") - 1);
+			smart_string_appendl(str, "XA_COMMIT", sizeof("XA_COMMIT") - 1);
 			break;
 		case XA_ROLLBACK:
-			smart_str_appendl(str, "XA_ROLLBACK", sizeof("XA_ROLLBACK") - 1);
+			smart_string_appendl(str, "XA_ROLLBACK", sizeof("XA_ROLLBACK") - 1);
 			break;
 		default:
 			/* forgotten option? */
 			assert(0);
 			break;
 	}
-	smart_str_0(str);
+	smart_string_0(str);
 }
 /* }}} */
 
@@ -458,7 +458,7 @@ mysqlnd_ms_xa_participants_change_state(MYSQLND_CONN_DATA * proxy_conn,
 				}
 
 			} else {
-				smart_str state_to = { 0, 0, 0 };
+				smart_string state_to = { 0, 0, 0 };
 				mysqlnd_ms_xa_state_to_string(to, &state_to);
 
 				if ((*proxy_conn_data)->xa_trx->gc) {
@@ -484,7 +484,7 @@ mysqlnd_ms_xa_participants_change_state(MYSQLND_CONN_DATA * proxy_conn,
 						(MYSQLND_MS_ERROR_INFO(participant->conn).error)
 					);
 				}
-				smart_str_free(&state_to);
+				smart_string_free(&state_to);
 			}
 		}
 	END_ITERATE_OVER_PARTICIPANT_LIST
@@ -1078,7 +1078,7 @@ mysqlnd_ms_xa_proxy_conn_free(MYSQLND_MS_CONN_DATA * proxy_conn_data, zend_bool 
  Free GC hash list entries
  */
 void
-mysqlnd_ms_xa_gc_hash_dtor(void *pDest) {
+mysqlnd_ms_xa_gc_hash_dtor(void *pDest)
 	unsigned long rnd_idx;
 	MYSQLND_MS_XA_GC * gc = *(MYSQLND_MS_XA_GC **)pDest;
 
@@ -1092,9 +1092,12 @@ mysqlnd_ms_xa_gc_hash_dtor(void *pDest) {
 		}
 
 		gc->store.dtor(&(gc->store.data), TRUE TSRMLS_CC);
+		gc->store.data = NULL;
 		mnd_pefree(gc, TRUE);
 	}
 }
+/* }}} */
+
 
 /* {{{ mysqlnd_ms_xa_add_participant */
 static enum_func_status

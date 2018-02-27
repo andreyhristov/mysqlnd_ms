@@ -763,7 +763,7 @@ typedef union YYSTYPE
 
   zval zv;
   const char * kn; /* keyword_name */
-  smart_str * comment;
+  smart_string * comment;
 
 
 
@@ -3557,7 +3557,7 @@ yyreduce:
 
 /* Line 1455 of yacc.c  */
 #line 917 "mysqlnd_query_parser.grammar"
-    { ZVAL_STRING(&((yyval.zv)), (yyvsp[(1) - (1)].kn), 1); ;}
+    { ZVAL_STRING(&((yyval.zv)), (yyvsp[(1) - (1)].kn)); ;}
     break;
 
   case 74:

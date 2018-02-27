@@ -38,8 +38,8 @@ MYSQLND_CONN_DATA * mysqlnd_ms_pick_server_ex(MYSQLND_CONN_DATA * conn,
 											  zend_bool * free_query,
 											  zend_bool * switched_servers TSRMLS_DC);
 
-void mysqlnd_ms_get_fingerprint(smart_str * context, zend_llist * list TSRMLS_DC);
-void mysqlnd_ms_get_fingerprint_connection(smart_str * context, MYSQLND_MS_LIST_DATA ** d TSRMLS_DC);
+void mysqlnd_ms_get_fingerprint(smart_string * context, zend_llist * list TSRMLS_DC);
+void mysqlnd_ms_get_fingerprint_connection(smart_string * context, MYSQLND_MS_LIST_DATA ** d TSRMLS_DC);
 
 enum_func_status
 mysqlnd_ms_select_servers_all(zend_llist * master_list, zend_llist * slave_list,

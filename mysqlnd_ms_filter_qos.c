@@ -42,6 +42,7 @@
 #include "mysqlnd_ms_config_json.h"
 #include "mysqlnd_ms_enum_n_def.h"
 #include "mysqlnd_ms_switch.h"
+#include "mysqlnd_ms_hash.h"
 
 /* {{{ qos_filter_dtor */
 static void
@@ -323,7 +324,7 @@ mysqlnd_ms_qos_server_get_lag_stage2(MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_D
 #endif
 	(*conn_data)->skip_ms_calls = TRUE;
 
-	if ((PASS == MS_CALL_ORIGINAL_CONN_DATA_METHOD(reap_query)(conn TSRMLS_CC)) &&
+	if ((PASS == MS_CALL_ORIGINAL_CONN_DATA_METHOD(reap_query)(conn, MYSQLND_REAP_RESULT_IMPLICIT TSRMLS_CC)) &&
 #if PHP_VERSION_ID < 50600
 		(res = MS_CALL_ORIGINAL_CONN_DATA_METHOD(store_result)(conn TSRMLS_CC))
 #else
@@ -340,38 +341,38 @@ mysqlnd_ms_qos_server_get_lag_stage2(MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_D
 		mysqlnd_fetch_into(res, MYSQLND_FETCH_ASSOC, row, MYSQLND_MYSQL);
 		if (Z_TYPE_P(row) == IS_ARRAY) {
 			/* TODO: make test incasesensitive */
-			if (FAILURE == zend_hash_find(Z_ARRVAL_P(row), "Slave_IO_Running", sizeof("Slave_IO_Running"), (void**)&io_running)) {
+			if (FAILURE == mms_hash_find(Z_ARRVAL_P(row), "Slave_IO_Running", sizeof("Slave_IO_Running"), (void**)&io_running)) {
 				SET_CLIENT_ERROR((*tmp_error_info),  CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, "Failed to extract Slave_IO_Running");
 				goto getlagsqlerror;
 			}
 
-			if ((Z_TYPE_PP(io_running) != IS_STRING) ||
-				(0 != strncasecmp(Z_STRVAL_PP(io_running), "Yes", Z_STRLEN_PP(io_running))))
+			if ((Z_TYPE_P(*io_running) != IS_STRING) ||
+				(0 != strncasecmp(Z_STRVAL_P(*io_running), "Yes", Z_STRLEN_P(*io_running))))
 			{
 				SET_CLIENT_ERROR((*tmp_error_info),  CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, "Slave_IO_Running is not 'Yes'");
 				goto getlagsqlerror;
 			}
 
-			if (FAILURE == zend_hash_find(Z_ARRVAL_P(row), "Slave_SQL_Running", sizeof("Slave_SQL_Running"), (void**)&sql_running))
+			if (FAILURE == mms_hash_find(Z_ARRVAL_P(row), "Slave_SQL_Running", sizeof("Slave_SQL_Running"), (void**)&sql_running))
 			{
 				SET_CLIENT_ERROR((*tmp_error_info),  CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, "Failed to extract Slave_SQL_Running");
 				goto getlagsqlerror;
 			}
 
-			if ((Z_TYPE_PP(io_running) != IS_STRING) ||
-				(0 != strncasecmp(Z_STRVAL_PP(sql_running), "Yes", Z_STRLEN_PP(sql_running))))
+			if ((Z_TYPE_P(*io_running) != IS_STRING) ||
+				(0 != strncasecmp(Z_STRVAL_P(*sql_running), "Yes", Z_STRLEN_P(*sql_running))))
 			{
 				SET_CLIENT_ERROR((*tmp_error_info),  CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, "Slave_SQL_Running is not 'Yes'");
 				goto getlagsqlerror;
 			}
 
-			if (FAILURE == zend_hash_find(Z_ARRVAL_P(row), "Seconds_Behind_Master", sizeof("Seconds_Behind_Master"), (void**)&seconds_behind_master))
+			if (FAILURE == mms_hash_find(Z_ARRVAL_P(row), "Seconds_Behind_Master", sizeof("Seconds_Behind_Master"), (void**)&seconds_behind_master))
 			{
 				SET_CLIENT_ERROR((*tmp_error_info),  CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, "Failed to extract Seconds_Behind_Master");
 				goto getlagsqlerror;
 			}
 
-			lag = Z_LVAL_PP(seconds_behind_master);
+			lag = Z_LVAL_P(*seconds_behind_master);
 		}
 
 getlagsqlerror:

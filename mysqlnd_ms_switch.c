@@ -56,6 +56,8 @@
 
 #include "mysqlnd_ms_switch.h"
 
+#include "mysqlnd_ms_hash.h"
+
 typedef MYSQLND_MS_FILTER_DATA * (*func_filter_ctor)(struct st_mysqlnd_ms_config_json_entry * section,
 													zend_llist * master_connections, zend_llist * slave_connections,
 													MYSQLND_ERROR_INFO * error_info, zend_bool persistent TSRMLS_DC);
@@ -225,7 +227,7 @@ mysqlnd_ms_lb_strategy_setup(struct mysqlnd_ms_lb_strategies * strategies,
 				strategies->failover_remember_failed = !mysqlnd_ms_config_json_string_is_bool_false(remember_failed);
 				if (strategies->failover_remember_failed) {
 					/* should we do a lazy init? */
-					zend_hash_init(&strategies->failed_hosts, 8, NULL/*hash*/, NULL/*dtor*/, persistent);
+					mms_hash_init(&strategies->failed_hosts, 8, NULL/*hash*/, NULL/*dtor*/, persistent);
 				}
 				mnd_efree(remember_failed);
 			}

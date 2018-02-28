@@ -39,6 +39,8 @@
 #include "mysqlnd_ms_switch.h"
 #include "mysqlnd_ms_config_json.h"
 #include "mysqlnd_ms_lb_weights.h"
+#include "mysqlnd_ms_hash.h"
+
 
 /* {{{ random_filter_dtor */
 static void
@@ -91,7 +93,7 @@ mysqlnd_ms_random_filter_ctor(struct st_mysqlnd_ms_config_json_entry * section, 
 		ret->parent.filter_dtor = random_filter_dtor;
 		ret->parent.filter_conn_pool_replaced  = random_filter_conn_pool_replaced;
 
-		zend_hash_init(&ret->lb_weight, 4, NULL/*hash*/, mysqlnd_ms_filter_lb_weight_dtor, persistent);
+		mms_hash_init(&ret->lb_weight, 4, NULL/*hash*/, mysqlnd_ms_filter_lb_weight_dtor, persistent);
 
 		/* section could be NULL! */
 		if (section) {
@@ -156,11 +158,11 @@ mysqlnd_ms_random_filter_ctor(struct st_mysqlnd_ms_config_json_entry * section, 
 		DBG_INF_FMT("#weight entries=%d", zend_hash_num_elements(&ret->lb_weight));
 
 		/* XXX: this could be initialized only in case of ONCE */
-		zend_hash_init(&ret->sticky.master_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
-		zend_hash_init(&ret->sticky.slave_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
+		mms_hash_init(&ret->sticky.master_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
+		mms_hash_init(&ret->sticky.slave_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
 
-		zend_hash_init(&ret->weight_context.master_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
-		zend_hash_init(&ret->weight_context.slave_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
+		mms_hash_init(&ret->weight_context.master_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
+		mms_hash_init(&ret->weight_context.slave_context, 4, NULL/*hash*/, NULL/*dtor*/, persistent);
 	} else {
 		MYSQLND_MS_WARN_OOM();
 	}
@@ -199,7 +201,7 @@ mysqlnd_ms_random_sort_list_remove_conn(void * element, void * data)
 /* {{{ mysqlnd_ms_random_sort_context_init */
 static int
 mysqlnd_ms_random_sort_context_init(HashTable * context, const smart_string * const fprint, const zend_llist * const server_list,
-									HashTable * lb_weight, zend_llist * sort_list, unsigned int * total_weight, zend_bool persistent TSRMLS_DC)
+									HashTable * lb_weight, zend_llist * sort_list, unsigned int * total_weight TSRMLS_DC)
 {
 	MYSQLND_MS_FILTER_RANDOM_LB_CONTEXT * lb_context;
 	MYSQLND_MS_FILTER_LB_WEIGHT_IN_CONTEXT * lb_weight_context, ** lb_weight_context_pp;
@@ -213,13 +215,13 @@ mysqlnd_ms_random_sort_context_init(HashTable * context, const smart_string * co
 		zend_llist_init(&local_lb_context.sort_list, sizeof(MYSQLND_MS_FILTER_LB_WEIGHT_IN_CONTEXT *), NULL /* dtor */, 1);
 		local_lb_context.total_weight = 0;
 
-		if (SUCCESS != zend_hash_add(context, fprint->c, fprint->len /*\0 counted*/, &local_lb_context, sizeof(MYSQLND_MS_FILTER_RANDOM_LB_CONTEXT), NULL)) {
+		if (SUCCESS != mms_hash_add(context, fprint->c, fprint->len /*\0 counted*/, &local_lb_context, sizeof(MYSQLND_MS_FILTER_RANDOM_LB_CONTEXT), NULL)) {
 			DBG_INF("Failed to add context");
 			DBG_RETURN(FAIL);
 		}
 	}
 	/* fetch ptr to the data inside the HT */
-	if (SUCCESS != zend_hash_find(context, fprint->c, fprint->len /*\0 counted*/, (void**)&lb_context)) {
+	if (SUCCESS != mms_hash_find(context, fprint->c, fprint->len /*\0 counted*/, (void**)&lb_context)) {
 		DBG_INF_FMT("Failed to get ptr to context - fingerprint='%s' len=%d", fprint->c, fprint->len);
 		DBG_RETURN(FAIL);
 	}
@@ -263,7 +265,7 @@ mysqlnd_ms_choose_connection_random_populate_sort_list(zend_llist * sort_list,
 
 	DBG_ENTER("mysqlnd_ms_choose_connection_random_populate_sort_list");
 	DBG_INF("Weighted load balancing");
-	if (FAILURE == zend_hash_find(weight_context_m_o_s_ctx, fprint->c, fprint->len /*\0 counted*/, (void **)&lb_context)) {
+	if (FAILURE == mms_hash_find(weight_context_m_o_s_ctx, fprint->c, fprint->len /*\0 counted*/, (void **)&lb_context)) {
 		/* build sort list for weighted load balancing */
 		if (SUCCESS != mysqlnd_ms_random_sort_context_init(weight_context_m_o_s_ctx, fprint, the_list,
 														   &filter->lb_weight, sort_list, total_weight TSRMLS_CC))
@@ -423,7 +425,7 @@ mysqlnd_ms_choose_connection_random_use_slave_aux(const zend_llist * const maste
 			if (stgy->failover_remember_failed) {
 				zend_bool * failed;
 				mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
-				if (SUCCESS == zend_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
+				if (SUCCESS == mms_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
 					smart_string_free(&fprint_conn);
 					zend_llist_del_element(l, element, mysqlnd_ms_random_remove_conn);
 					if (use_lb_context) {
@@ -439,7 +441,7 @@ mysqlnd_ms_choose_connection_random_use_slave_aux(const zend_llist * const maste
 				MYSQLND_MS_INC_STATISTIC(MS_STAT_USE_SLAVE);
 				SET_EMPTY_ERROR(MYSQLND_MS_ERROR_INFO(connection));
 				if (TRUE == filter->sticky.once) {
-					zend_hash_update(&filter->sticky.slave_context, fprint->c, fprint->len /*\0 counted*/, &connection, sizeof(MYSQLND *), NULL);
+					mms_hash_update(&filter->sticky.slave_context, fprint->c, fprint->len /*\0 counted*/, &connection, sizeof(MYSQLND *), NULL);
 				}
 				if (fprint_conn.c) {
 					smart_string_free(&fprint_conn);
@@ -449,7 +451,7 @@ mysqlnd_ms_choose_connection_random_use_slave_aux(const zend_llist * const maste
 
 			if (stgy->failover_remember_failed) {
 				zend_bool failed = TRUE;
-				if (SUCCESS != zend_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
+				if (SUCCESS != mms_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
 					DBG_INF("Failed to remember failing connection");
 				}
 			}
@@ -516,7 +518,7 @@ mysqlnd_ms_choose_connection_random_use_slave(zend_llist * master_connections,
 
 	mysqlnd_ms_get_fingerprint(&fprint, slave_connections TSRMLS_CC);
 
-	if (SUCCESS == zend_hash_find(&filter->sticky.slave_context, fprint.c, fprint.len /*\0 counted*/, (void **) &context_pos)) {
+	if (SUCCESS == mms_hash_find(&filter->sticky.slave_context, fprint.c, fprint.len /*\0 counted*/, (void **) &context_pos)) {
 		conn = context_pos? *context_pos : NULL;
 		if (conn) {
 			DBG_INF_FMT("Using already selected slave connection "MYSQLND_LLU_SPEC, conn->thread_id);
@@ -583,7 +585,7 @@ mysqlnd_ms_choose_connection_random_use_master_aux(zend_llist * master_connectio
 		/* TODO: cleanup - master and slave code are identical,use function to avoid code duplication */
 		DBG_INF("Weighted load balancing");
 		use_lb_context = TRUE;
-		if (FAILURE == zend_hash_find(&filter->weight_context.master_context, fprint->c, fprint->len /*\0 counted*/, (void **)&lb_context)) {
+		if (FAILURE == mms_hash_find(&filter->weight_context.master_context, fprint->c, fprint->len /*\0 counted*/, (void **)&lb_context)) {
 			/* build sort list for weighted load balancing */
 			if (SUCCESS != mysqlnd_ms_random_sort_context_init(&filter->weight_context.master_context, fprint, l,
 															   &filter->lb_weight, &sort_list, &total_weight TSRMLS_CC))
@@ -639,7 +641,7 @@ mysqlnd_ms_choose_connection_random_use_master_aux(zend_llist * master_connectio
 				zend_bool * failed;
 
 				mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
-				if (SUCCESS == zend_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
+				if (SUCCESS == mms_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
 					smart_string_free(&fprint_conn);
 					zend_llist_del_element(l, element, mysqlnd_ms_random_remove_conn);
 					DBG_INF("Skipping previously failed connection");
@@ -655,7 +657,7 @@ mysqlnd_ms_choose_connection_random_use_master_aux(zend_llist * master_connectio
 				MYSQLND_MS_INC_STATISTIC(MS_STAT_USE_MASTER);
 				SET_EMPTY_ERROR(MYSQLND_MS_ERROR_INFO(connection));
 				if (TRUE == filter->sticky.once) {
-					zend_hash_update(&filter->sticky.master_context, fprint->c, fprint->len /*\0 counted*/, &connection,
+					mms_hash_update(&filter->sticky.master_context, fprint->c, fprint->len /*\0 counted*/, &connection,
 									sizeof(MYSQLND *), NULL);
 				}
 				if (fprint_conn.c) {
@@ -666,7 +668,7 @@ mysqlnd_ms_choose_connection_random_use_master_aux(zend_llist * master_connectio
 
 			if (stgy->failover_remember_failed) {
 				zend_bool failed = TRUE;
-				if (SUCCESS != zend_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
+				if (SUCCESS != mms_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
 					DBG_INF("Failed to remember failing connection");
 				}
 			}
@@ -737,7 +739,7 @@ mysqlnd_ms_choose_connection_random_use_master(zend_llist * master_connections,
 	mysqlnd_ms_get_fingerprint(&fprint, master_connections TSRMLS_CC);
 
 	/* LOCK on context ??? */
-	if (SUCCESS == zend_hash_find(&filter->sticky.master_context, fprint.c, fprint.len /*\0 counted*/, (void **) &context_pos)) {
+	if (SUCCESS == mms_hash_find(&filter->sticky.master_context, fprint.c, fprint.len /*\0 counted*/, (void **) &context_pos)) {
 		conn = context_pos? *context_pos : NULL;
 		if (!conn) {
 			mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, E_WARNING TSRMLS_CC,

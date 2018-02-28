@@ -1,9 +1,11 @@
 *.lo*
+*.la
 config.*
 configure*
 Makefile*
 .deps
 .libs/*
+modules/*
 acinclude.m4
 aclocal.m4
 autom4te.cache/*

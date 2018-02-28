@@ -54,7 +54,7 @@ enum_func_status mysqlnd_ms_xa_monitor_direct_rollback(MYSQLND_CONN_DATA * conn,
 enum_func_status mysqlnd_ms_xa_gc_one(MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_DATA * conn_data, unsigned int gtrid, zend_bool ignore_max_retries TSRMLS_DC);
 enum_func_status mysqlnd_ms_xa_gc_all(MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_DATA * conn_data, zend_bool ignore_max_retries TSRMLS_DC);
 
-void mysqlnd_ms_xa_state_to_string(enum mysqlnd_ms_xa_state state, smart_str * str);
+void mysqlnd_ms_xa_state_to_string(enum mysqlnd_ms_xa_state state, smart_string * str);
 void mysqlnd_ms_load_xa_config(struct st_mysqlnd_ms_config_json_entry * main_section, MYSQLND_MS_XA_TRX * xa_trx, MYSQLND_ERROR_INFO * error_info, zend_bool persistent TSRMLS_DC);
 
 MYSQLND_MS_XA_TRX * mysqlnd_ms_xa_proxy_conn_init(const char * host, size_t host_len, zend_bool persistent TSRMLS_DC);

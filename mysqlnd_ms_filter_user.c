@@ -38,6 +38,7 @@
 #include "mysqlnd_qp.h"
 
 #include "mysqlnd_ms_enum_n_def.h"
+#include "mysqlnd_ms_hash.h"
 
 #define MS_STRING(vl, a)				\
 {											\

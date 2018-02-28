@@ -39,6 +39,7 @@
 #include "fabric/mysqlnd_fabric.h"
 #include "mysqlnd_ms_xa.h"
 #include "mysqlnd_ms_conn_pool.h"
+#include "mysqlnd_ms_hash.h"
 
 #ifndef mnd_sprintf
 #define mnd_sprintf spprintf
@@ -133,7 +134,7 @@ PHP_RINIT_FUNCTION(mysqlnd_ms)
 {
 	if (MYSQLND_MS_G(enable)) {
 
-		zend_hash_init(&MYSQLND_MS_G(xa_state_stores), 0, NULL, mysqlnd_ms_xa_gc_hash_dtor, 1);
+		mms_hash_init(&MYSQLND_MS_G(xa_state_stores), 0, NULL, mysqlnd_ms_xa_gc_hash_dtor, 1);
 
 		MYSQLND_MS_CONFIG_JSON_LOCK(mysqlnd_ms_json_config);
 		if (FALSE == mysqlnd_ms_global_config_loaded) {
@@ -416,8 +417,6 @@ static PHP_FUNCTION(mysqlnd_ms_get_last_gtid)
 	}
 	{
 		MYSQLND_RES * res = NULL;
-		zval row;
-		zval * gtid;
 
 		conn_data = (MYSQLND_MS_CONN_DATA **) mysqlnd_plugin_get_plugin_connection_data_data(proxy_conn->data, mysqlnd_ms_plugin_id);
 		if (!conn_data || !(*conn_data)) {
@@ -461,19 +460,23 @@ static PHP_FUNCTION(mysqlnd_ms_get_last_gtid)
 
 		(*conn_data)->skip_ms_calls = FALSE;
 
-		mysqlnd_fetch_into(res, MYSQLND_FETCH_NUM, &row, MYSQLND_MYSQL);
-		if (Z_TYPE(row) != IS_ARRAY) {
-			zval_dtor(&row);
-			res->m.free_result(res, FALSE TSRMLS_CC);
-			goto getlastidfailure;
-		}
+		{
+			zval row;
+			zval * gtid;
 
-		if ((gtid = zend_hash_index_find(Z_ARRVAL(row), 0))) {
-			RETVAL_ZVAL(gtid, 1, NULL);
-			zval_dtor(&row);
-			res->m.free_result(res, FALSE TSRMLS_CC);
-			return;
-		} else {
+			mysqlnd_fetch_into(res, MYSQLND_FETCH_NUM, &row, MYSQLND_MYSQL);
+			if (Z_TYPE(row) != IS_ARRAY) {
+				zval_dtor(&row);
+				res->m.free_result(res, FALSE TSRMLS_CC);
+				goto getlastidfailure;
+			}
+
+			if ((gtid = zend_hash_index_find(Z_ARRVAL(row), 0))) {
+				RETVAL_ZVAL(gtid, 1, NULL);
+				zval_dtor(&row);
+				res->m.free_result(res, FALSE TSRMLS_CC);
+				return;
+			}
 			/* no error code set on line, we need to bail explicitly */
 			php_error_docref(NULL TSRMLS_CC, E_WARNING, "Failed to read GTID from result set. Please report a bug");
 		}

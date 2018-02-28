@@ -38,6 +38,8 @@
 #include "mysqlnd_ms_enum_n_def.h"
 #include "mysqlnd_ms_lb_weights.h"
 #include "mysqlnd_ms_config_json.h"
+#include "mysqlnd_ms_hash.h"
+
 
 /* {{{ mysqlnd_ms_filter_rr_context_dtor */
 static void
@@ -109,9 +111,9 @@ mysqlnd_ms_rr_filter_ctor(struct st_mysqlnd_ms_config_json_entry * section, zend
 		ret->parent.filter_dtor = rr_filter_dtor;
 		ret->parent.filter_conn_pool_replaced = rr_filter_conn_pool_replaced;
 
-		zend_hash_init(&ret->master_context, 4, NULL/*hash*/, mysqlnd_ms_filter_rr_context_dtor, persistent);
-		zend_hash_init(&ret->slave_context, 4, NULL/*hash*/, mysqlnd_ms_filter_rr_context_dtor, persistent);
-		zend_hash_init(&ret->lb_weight, 4, NULL/*hash*/, mysqlnd_ms_filter_lb_weight_dtor, persistent);
+		mms_hash_init(&ret->master_context, 4, NULL/*hash*/, mysqlnd_ms_filter_rr_context_dtor, persistent);
+		mms_hash_init(&ret->slave_context, 4, NULL/*hash*/, mysqlnd_ms_filter_rr_context_dtor, persistent);
+		mms_hash_init(&ret->lb_weight, 4, NULL/*hash*/, mysqlnd_ms_filter_lb_weight_dtor, persistent);
 
 		/* roundrobin => array(weights  => array(name => w, ... )) */
 		if (section &&
@@ -155,7 +157,7 @@ mysqlnd_ms_choose_connection_rr_fetch_context(HashTable * rr_contexts, zend_llis
 	DBG_ENTER("mysqlnd_ms_choose_connection_rr_fetch_context");
 
 	mysqlnd_ms_get_fingerprint(&fprint, connections TSRMLS_CC);
-	if (SUCCESS != zend_hash_find(rr_contexts, fprint.c, fprint.len /*\0 counted*/, (void **) &ret_context)) {
+	if (SUCCESS != mms_hash_find(rr_contexts, fprint.c, fprint.len /*\0 counted*/, (void **) &ret_context)) {
 		MYSQLND_MS_FILTER_RR_CONTEXT context;
 		int retval;
 		DBG_INF("Init the master context");
@@ -163,10 +165,10 @@ mysqlnd_ms_choose_connection_rr_fetch_context(HashTable * rr_contexts, zend_llis
 		context.pos = 0;
 		mysqlnd_ms_weight_list_init(&context.weight_list TSRMLS_CC);
 
-		retval = zend_hash_add(rr_contexts, fprint.c, fprint.len /*\0 counted*/, &context, sizeof(MYSQLND_MS_FILTER_RR_CONTEXT), NULL);
+		retval = mms_hash_add(rr_contexts, fprint.c, fprint.len /*\0 counted*/, &context, sizeof(MYSQLND_MS_FILTER_RR_CONTEXT), NULL);
 		if (SUCCESS == retval) {
 			/* fetch ptr to the data inside the HT */
-			retval = zend_hash_find(rr_contexts, fprint.c, fprint.len /*\0 counted*/, (void**)&ret_context);
+			retval = mms_hash_find(rr_contexts, fprint.c, fprint.len /*\0 counted*/, (void**)&ret_context);
 		}
 		smart_string_free(&fprint);
 		if (SUCCESS != retval) {
@@ -351,7 +353,7 @@ mysqlnd_ms_choose_connection_rr_use_slave(zend_llist * master_connections,
 			if (stgy->failover_remember_failed) {
 				zend_bool * failed;
 				mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
-				if (SUCCESS == zend_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
+				if (SUCCESS == mms_hash_find(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void **) &failed)) {
 					smart_string_free(&fprint_conn);
 					DBG_INF("Skipping previously failed connection");
 					continue;
@@ -371,7 +373,7 @@ mysqlnd_ms_choose_connection_rr_use_slave(zend_llist * master_connections,
 			/* Not nice, bad connection, mark it if the user wants it */
 			if (stgy->failover_remember_failed) {
 				zend_bool failed = TRUE;
-				if (SUCCESS != zend_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
+				if (SUCCESS != mms_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
 					DBG_INF("Failed to remember failing connection");
 				}
 			}
@@ -493,7 +495,7 @@ mysqlnd_ms_choose_connection_rr_use_master(zend_llist * master_connections,
 
 			if (stgy->failover_remember_failed) {
 				mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
-				if (zend_hash_exists(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/)) {
+				if (mms_hash_exists(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/)) {
 					smart_string_free(&fprint_conn);
 					DBG_INF("Skipping previously failed connection");
 					continue;
@@ -510,7 +512,7 @@ mysqlnd_ms_choose_connection_rr_use_master(zend_llist * master_connections,
 
 			if (stgy->failover_remember_failed) {
 				zend_bool failed = TRUE;
-				if (SUCCESS != zend_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
+				if (SUCCESS != mms_hash_add(&stgy->failed_hosts, fprint_conn.c, fprint_conn.len /*\0 counted*/, &failed, sizeof(zend_bool), NULL)) {
 					DBG_INF("Failed to remember failing connection");
 				}
 			}

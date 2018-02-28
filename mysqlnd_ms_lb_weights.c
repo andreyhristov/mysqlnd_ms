@@ -34,6 +34,7 @@
 #include "mysqlnd_ms_switch.h"
 #include "mysqlnd_ms_enum_n_def.h"
 #include "mysqlnd_ms_config_json.h"
+#include "mysqlnd_ms_hash.h"
 
 
 /* {{{ mysqlnd_ms_filter_lb_weight_dtor */
@@ -66,13 +67,13 @@ mysqlnd_ms_filter_ctor_load_weights_config(HashTable * lb_weights_list, const ch
 	DBG_ENTER("mysqlnd_ms_filter_ctor_load_weights_config");
 
 	/* Build server hash table */
-	zend_hash_init(&server_names, 4, NULL/*hash*/, NULL/*dtor*/, FALSE);
+	mms_hash_init(&server_names, 4, NULL/*hash*/, NULL/*dtor*/, FALSE);
 
 	for (entry_pp = (MYSQLND_MS_LIST_DATA **) zend_llist_get_first_ex(master_connections, &pos);
 		entry_pp && (entry = *entry_pp) && (entry->name_from_config) && (entry->conn);
 		entry_pp = (MYSQLND_MS_LIST_DATA **) zend_llist_get_next_ex(master_connections, &pos)) {
 
-		if (SUCCESS != zend_hash_add(&server_names, entry->name_from_config, strlen(entry->name_from_config), entry_pp, sizeof(void *), NULL)) {
+		if (SUCCESS != mms_hash_add(&server_names, entry->name_from_config, strlen(entry->name_from_config), entry_pp, sizeof(void *), NULL)) {
 			mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 							E_RECOVERABLE_ERROR TSRMLS_CC,
 							MYSQLND_MS_ERROR_PREFIX " Failed to setup master server list for '%s' filter. Stopping", filter_name);
@@ -83,7 +84,7 @@ mysqlnd_ms_filter_ctor_load_weights_config(HashTable * lb_weights_list, const ch
 		entry_pp && (entry = *entry_pp) && (entry->name_from_config) && (entry->conn);
 		entry_pp = (MYSQLND_MS_LIST_DATA **) zend_llist_get_next_ex(slave_connections, &pos)) {
 
-		if (SUCCESS != zend_hash_add(&server_names, entry->name_from_config, strlen(entry->name_from_config), entry_pp, sizeof(void *), NULL)) {
+		if (SUCCESS != mms_hash_add(&server_names, entry->name_from_config, strlen(entry->name_from_config), entry_pp, sizeof(void *), NULL)) {
 			mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 							E_RECOVERABLE_ERROR TSRMLS_CC,
 							MYSQLND_MS_ERROR_PREFIX " Failed to setup slave server list for '%s' filter. Stopping", filter_name);
@@ -104,7 +105,7 @@ mysqlnd_ms_filter_ctor_load_weights_config(HashTable * lb_weights_list, const ch
 			break;
 		}
 
-		if (SUCCESS != zend_hash_find(&server_names, current_subsection_name, current_subsection_name_len, (void **)&entry_pp)) {
+		if (SUCCESS != mms_hash_find(&server_names, current_subsection_name, current_subsection_name_len, (void **)&entry_pp)) {
 			mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 									E_RECOVERABLE_ERROR TSRMLS_CC,
 									MYSQLND_MS_ERROR_PREFIX " Unknown server '%s' in '%s' filter configuration. Stopping",
@@ -136,7 +137,7 @@ mysqlnd_ms_filter_ctor_load_weights_config(HashTable * lb_weights_list, const ch
 
 					mysqlnd_ms_get_fingerprint_connection(&fprint_conn, entry_pp TSRMLS_CC);
 
-					if (SUCCESS != zend_hash_add(lb_weights_list, fprint_conn.c, fprint_conn.len, weight_entry, sizeof(MYSQLND_MS_FILTER_LB_WEIGHT), NULL)) {
+					if (SUCCESS != mms_hash_add(lb_weights_list, fprint_conn.c, fprint_conn.len, weight_entry, sizeof(MYSQLND_MS_FILTER_LB_WEIGHT), NULL)) {
 						mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 							E_RECOVERABLE_ERROR TSRMLS_CC,
 							MYSQLND_MS_ERROR_PREFIX " Failed to create internal weights lookup table for filter '%s'. Stopping", filter_name);
@@ -182,7 +183,7 @@ mysqlnd_ms_populate_weights_sort_list(HashTable * lb_weights_list,
 	DBG_INF("Building sort list");
 	BEGIN_ITERATE_OVER_SERVER_LIST(element, server_list);
 		mysqlnd_ms_get_fingerprint_connection(&fprint_conn, &element TSRMLS_CC);
-		retval = zend_hash_find(lb_weights_list, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void**) &weight_entry);
+		retval = mms_hash_find(lb_weights_list, fprint_conn.c, fprint_conn.len /*\0 counted*/, (void**) &weight_entry);
 		if (SUCCESS == retval) {
 			/* persistent needed in weight entry - could take from element/conn */
 			lb_weight_context = mnd_pecalloc(1, sizeof(MYSQLND_MS_FILTER_LB_WEIGHT_IN_CONTEXT), weight_entry->persistent);

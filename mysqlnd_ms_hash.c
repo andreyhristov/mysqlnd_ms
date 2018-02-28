@@ -35,13 +35,12 @@
 
 
 /* {{{ _mms_hash_init */
-void
+int
 _mms_hash_init(HashTable * ht, const uint32_t nSize, dtor_func_t pDestructor, const zend_bool persistent ZEND_FILE_LINE_DC)
 {
 	DBG_ENTER("_mms_hash_init");
-
 	zend_hash_init(ht, nSize, NULL, pDestructor, persistent);
-	DBG_VOID_RETURN;
+	DBG_RETURN(SUCCESS);
 }
 /* }}} */
 
@@ -62,23 +61,23 @@ _mms_hash_add(HashTable * ht, const char * const arKey, const size_t nKeyLength,
 int
 _mms_hash_update(HashTable * ht, const char * const arKey, const size_t nKeyLength, void * pData ZEND_FILE_LINE_DC)
 {
-	int ret;
+	void * pDataLocal;
 	DBG_ENTER("_mms_hash_update");
-	ret = zend_hash_str_update_ptr(ht,  arKey, nKeyLength, pData);
-	DBG_RETURN(ret);
+	pDataLocal = zend_hash_str_update_ptr(ht,  arKey, nKeyLength, pData);
+	DBG_RETURN(pDataLocal? SUCCESS:FAILURE);
 }
 /* }}} */
 
 
 /* {{{ mms_hash_find */
 int
-mms_hash_find(const HashTable * ht, const char * const arKey, const size_t nKeyLength, void ** pData);
+mms_hash_find(const HashTable * ht, const char * const arKey, const size_t nKeyLength, void ** pData)
 {
 	void * pDataLocal;
 
 	DBG_ENTER("mms_hash_find");
 	pDataLocal = zend_hash_str_find_ptr(ht, arKey, nKeyLength);
-	if (pdata && pDataLocal) {
+	if (pData && pDataLocal) {
 		*pData = pDataLocal;
 	}
 	DBG_RETURN(pDataLocal? SUCCESS : FAILURE);
@@ -88,13 +87,13 @@ mms_hash_find(const HashTable * ht, const char * const arKey, const size_t nKeyL
 
 /* {{{ mms_hash_index_find */
 int
-mms_hash_index_find(const HashTable * const ht, const ulong h, void ** pData);
+mms_hash_index_find(const HashTable * const ht, const ulong h, void ** pData)
 {
 	void * pDataLocal;
 
 	DBG_ENTER("mms_hash_index_find");
 	pDataLocal = zend_hash_index_find_ptr(ht, h);
-	if (pdata && pDataLocal) {
+	if (pData && pDataLocal) {
 		*pData = pDataLocal;
 	}
 	DBG_RETURN(pDataLocal? SUCCESS : FAILURE);
@@ -104,17 +103,16 @@ mms_hash_index_find(const HashTable * const ht, const ulong h, void ** pData);
 
 /* {{{ _mms_hash_get_current_key_ex */
 int
-_mms_hash_get_current_key_ex(const HashTable * const ht, char ** str_index, uint * const str_length, zend_ulong * const num_index, const HashPosition * const pos);
+_mms_hash_get_current_key_ex(const HashTable * const ht, char ** str_index, uint * const str_length, zend_ulong * const num_index, const HashPosition * const pos)
 {
 	int ret;
 	zend_string * key = NULL;
-
 	DBG_ENTER("_mms_hash_get_current_key_ex");
 
-	ret = zend_hash_get_current_key_ex(ht, &key, num_index, pos);
+	ret = zend_hash_get_current_key_ex(ht, &key, num_index, (HashPosition*) pos);
 	if (ret == HASH_KEY_IS_STRING) {
-		*str_index = key.val;
-		*str_length = key.len;
+		*str_index = key->val;
+		*str_length = key->len;
 	}
 	
 	DBG_RETURN(ret);
@@ -129,7 +127,7 @@ mms_hash_get_current_data_ex(const HashTable * const ht, void ** pData, const Ha
 	void * pDataLocal;
 
 	DBG_ENTER("_mms_hash_get_current_data_ex");
-	pDataLocal = zend_hash_get_current_data_ptr_ex(ht, pos);
+	pDataLocal = zend_hash_get_current_data_ptr_ex((HashTable *) ht, (HashPosition *) pos);
 	if (pDataLocal && pData) {
 		*pData = pDataLocal;
 	}

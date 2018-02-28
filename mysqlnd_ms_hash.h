@@ -25,6 +25,7 @@
 #define mms_hash_exists(ht, arKey, nKeyLength)								zend_hash_str_exists(ht, arKey, nKeyLength)
 #define mms_hash_sort(ht, sort_func, compare_func, renumber)				zend_hash_sort(ht, compare_func, renumber)
 #define mms_hash_get_current_key_ex(ht, str_index, str_length, num_index, duplicate, pos) _mms_hash_get_current_key_ex(ht, str_index, str_length, num_index, pos)
+int mms_hash_find(const HashTable * ht, const char * const arKey, const size_t nKeyLength, void ** pData);
 int mms_hash_index_find(const HashTable * const ht, const ulong h, void ** pData);
 #define mms_hash_del(ht, arKey, nKeyLength)									zend_hash_str_del(ht, arKey, nKeyLength)
 
@@ -39,7 +40,7 @@ int mms_hash_get_current_data_ex(const HashTable * const ht, void ** pData, cons
 
 int _mms_hash_get_current_key_ex(const HashTable * const ht, char ** str_index, uint * const str_length, zend_ulong * const num_index, const HashPosition * const pos);
 
-void _mms_hash_init(HashTable * ht, const uint32_t nSize, dtor_func_t pDestructor, const zend_bool persistent ZEND_FILE_LINE_DC);
+int _mms_hash_init(HashTable * ht, const uint32_t nSize, dtor_func_t pDestructor, const zend_bool persistent ZEND_FILE_LINE_DC);
 
 int _mms_hash_add(HashTable * ht, const char * const arKey, const size_t nKeyLength, void * pData ZEND_FILE_LINE_DC);
 int _mms_hash_update(HashTable * ht, const char * const arKey, const size_t nKeyLength, void * pData ZEND_FILE_LINE_DC);

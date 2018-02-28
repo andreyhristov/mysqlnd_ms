@@ -50,6 +50,7 @@
 #include "fabric/mysqlnd_fabric.h"
 
 #include "mysqlnd_ms_conn_pool.h"
+#include "mysqlnd_ms_hash.h"
 
 
 #if PHP_VERSION_ID < 50400

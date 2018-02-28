@@ -29,6 +29,7 @@
 #include "mysqlnd_ms_config_json.h"
 #include "mysqlnd_ms_xa_store_mysql.h"
 #include "mysqlnd_ms_conn_pool.h"
+#include "mysqlnd_ms_hash.h"
 
 #if PHP_VERSION_ID >= 50400
 #include "ext/mysqlnd/mysqlnd_ext_plugin.h"
@@ -169,8 +170,8 @@ void mysqlnd_ms_load_xa_config(struct st_mysqlnd_ms_config_json_entry * main_sec
 			}
 			if (xa_trx->gc) {
 				/* register in global list of garbage collection settings, if no GC has been registered for the host (= cluster/config section) already */
-				if (!zend_hash_exists(&MYSQLND_MS_G(xa_state_stores), xa_trx->host, xa_trx->host_len + 1)) {
-					if (zend_hash_add(&MYSQLND_MS_G(xa_state_stores), xa_trx->host, xa_trx->host_len + 1, &xa_trx->gc, sizeof(MYSQLND_MS_XA_GC *), NULL)) {
+				if (!mms_hash_exists(&MYSQLND_MS_G(xa_state_stores), xa_trx->host, xa_trx->host_len + 1)) {
+					if (mms_hash_add(&MYSQLND_MS_G(xa_state_stores), xa_trx->host, xa_trx->host_len + 1, &xa_trx->gc, sizeof(MYSQLND_MS_XA_GC *), NULL)) {
 						mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE, E_RECOVERABLE_ERROR TSRMLS_CC,
 												MYSQLND_MS_ERROR_PREFIX " Failed to setup garbage collection %s", xa_trx->host);
 							xa_trx->gc->store.dtor(&(xa_trx->gc->store.data), TRUE TSRMLS_CC);
@@ -1079,6 +1080,7 @@ mysqlnd_ms_xa_proxy_conn_free(MYSQLND_MS_CONN_DATA * proxy_conn_data, zend_bool 
  */
 void
 mysqlnd_ms_xa_gc_hash_dtor(void *pDest)
+{
 	unsigned long rnd_idx;
 	MYSQLND_MS_XA_GC * gc = *(MYSQLND_MS_XA_GC **)pDest;
 

@@ -30,7 +30,9 @@
 #include "ext/mysqlnd/mysqlnd_priv.h"
 
 #include "mysqlnd_ms.h"
+#include "mysqlnd_ms_hash.h"
 #include "mysqlnd_ms_config_json.h"
+#include "mysqlnd_ms_hash.h"
 
 #include "ext/json/php_json.h"
 
@@ -230,7 +232,7 @@ mysqlnd_ms_zval_data_to_hashtable(zval * json_data TSRMLS_DC)
 			ret = NULL;
 			DBG_RETURN(ret);
 		}
-		zend_hash_init(ret->value.ht, Z_TYPE_P(json_data) == IS_ARRAY? zend_hash_num_elements(Z_ARRVAL_P(json_data)) : 1,
+		mms_hash_init(ret->value.ht, Z_TYPE_P(json_data) == IS_ARRAY? zend_hash_num_elements(Z_ARRVAL_P(json_data)) : 1,
 						NULL /* hash_func */, mysqlnd_ms_config_json_section_dtor /*dtor*/, 1 /* persistent */);
 
 		if (Z_TYPE_P(json_data) == IS_ARRAY) {

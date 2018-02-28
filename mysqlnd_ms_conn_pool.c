@@ -24,6 +24,8 @@
 
 #include "mysqlnd_ms_conn_pool.h"
 #include "mysqlnd_ms.h"
+#include "mysqlnd_ms_hash.h"
+
 
 #if PHP_VERSION_ID >= 50400
 #include "ext/mysqlnd/mysqlnd_ext_plugin.h"
@@ -183,7 +185,7 @@ pool_flush_active(MYSQLND_MS_POOL * pool TSRMLS_DC)
 
 	BEGIN_ITERATE_OVER_SERVER_LIST(el, &(pool->data.active_master_list))
 	{
-		if (SUCCESS == zend_hash_find(&(pool->data.master_list), el->pool_hash_key.c, el->pool_hash_key.len, (void**)&pool_element)) {
+		if (SUCCESS == mms_hash_find(&(pool->data.master_list), el->pool_hash_key.c, el->pool_hash_key.len, (void**)&pool_element)) {
 			(*pool_element)->active = FALSE;
 		} else {
 			ret = FAIL;
@@ -196,7 +198,7 @@ pool_flush_active(MYSQLND_MS_POOL * pool TSRMLS_DC)
 
 	BEGIN_ITERATE_OVER_SERVER_LIST(el, &(pool->data.active_slave_list))
 	{
-		if (SUCCESS == zend_hash_find(&(pool->data.slave_list), el->pool_hash_key.c, el->pool_hash_key.len, (void**)&pool_element)) {
+		if (SUCCESS == mms_hash_find(&(pool->data.slave_list), el->pool_hash_key.c, el->pool_hash_key.len, (void**)&pool_element)) {
 			(*pool_element)->active = FALSE;
 		} else {
 			ret = FAIL;
@@ -375,7 +377,7 @@ pool_add_slave(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 		pool_element->ref_counter = 1;
 		pool_element->removed = FALSE;
 
-		if (SUCCESS != zend_hash_add(&(pool->data.slave_list), hash_key->c, hash_key->len, &pool_element, sizeof(MYSQLND_MS_POOL_ENTRY *), NULL)) {
+		if (SUCCESS != mms_hash_add(&(pool->data.slave_list), hash_key->c, hash_key->len, &pool_element, sizeof(MYSQLND_MS_POOL_ENTRY *), NULL)) {
 			DBG_INF_FMT("Failed adding, duplicate hash key, added twice?");
 			ret = FAIL;
 		}
@@ -430,7 +432,7 @@ pool_add_master(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 		pool_element->ref_counter = 1;
 		pool_element->removed = FALSE;
 
-		if (SUCCESS != zend_hash_add(&(pool->data.master_list), hash_key->c, hash_key->len, &pool_element, sizeof(MYSQLND_MS_POOL_ENTRY *), NULL)) {
+		if (SUCCESS != mms_hash_add(&(pool->data.master_list), hash_key->c, hash_key->len, &pool_element, sizeof(MYSQLND_MS_POOL_ENTRY *), NULL)) {
 			DBG_INF_FMT("Failed adding, duplicate hash key, added twice?");
 			ret = FAIL;
 		}
@@ -471,14 +473,14 @@ pool_connection_exists(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 		DBG_RETURN(FAIL);	
 	}
 
-	if (SUCCESS == zend_hash_find(&(pool->data.master_list), hash_key->c, hash_key->len, (void**)&pool_element)) {
+	if (SUCCESS == mms_hash_find(&(pool->data.master_list), hash_key->c, hash_key->len, (void**)&pool_element)) {
 		*is_master = TRUE;
 		*is_active = (*pool_element)->active;
 		*is_removed = (*pool_element)->removed;
 		*data = (*pool_element)->data;
 		ret = TRUE;
 		DBG_INF_FMT("element=%p list=%p is_master=%d", *pool_element, &(pool->data.master_list), *is_master);
-	} else if (SUCCESS == zend_hash_find(&(pool->data.slave_list), hash_key->c, hash_key->len, (void**)&pool_element)) {
+	} else if (SUCCESS == nms_hash_find(&(pool->data.slave_list), hash_key->c, hash_key->len, (void**)&pool_element)) {
 		*is_master = FALSE;
 		*is_active = (*pool_element)->active;
 		*is_removed = (*pool_element)->removed;
@@ -518,7 +520,7 @@ pool_connection_reactivate(MYSQLND_MS_POOL * pool, smart_string * hash_key, zend
 	list = (is_master) ? &(pool->data.active_master_list) : &(pool->data.active_slave_list);
 	stat = (is_master) ? MS_STAT_POOL_MASTERS_ACTIVE : MS_STAT_POOL_SLAVES_ACTIVE;
 
-	if (SUCCESS == zend_hash_find(ht, hash_key->c, hash_key->len, (void**)&pool_element)) {
+	if (SUCCESS == mms_hash_find(ht, hash_key->c, hash_key->len, (void**)&pool_element)) {
 		DBG_INF_FMT("element=%p is_active=%d is_removed=%d", *pool_element, (*pool_element)->active, (*pool_element)->removed);
 		if (!(*pool_element)->active && !(*pool_element)->removed) {
 			ret = PASS;
@@ -561,11 +563,11 @@ pool_connection_remove(MYSQLND_MS_POOL * pool, smart_string * hash_key, zend_boo
 
 	ht = (is_master) ? &(pool->data.master_list) : &(pool->data.slave_list);
 
-	if (SUCCESS == zend_hash_find(ht, hash_key->c, hash_key->len, (void**)&pool_element)) {
+	if (SUCCESS == mms_hash_find(ht, hash_key->c, hash_key->len, (void**)&pool_element)) {
 		DBG_INF_FMT("element=%p is_active=%d is_removed=%d ref_counter=%d", *pool_element, (*pool_element)->active, (*pool_element)->removed, (*pool_element)->ref_counter);
 		if (!(*pool_element)->active && !(*pool_element)->removed) {
 			if (1 == (*pool_element)->ref_counter) {
-				ret = (SUCCESS == zend_hash_del(ht, hash_key->c, hash_key->len)) ? PASS : FAIL;
+				ret = (SUCCESS == mms_hash_del(ht, hash_key->c, hash_key->len)) ? PASS : FAIL;
 			} else {
 				ret = PASS;
 				(*pool_element)->removed = TRUE;
@@ -663,7 +665,7 @@ pool_add_reference(MYSQLND_MS_POOL * pool, MYSQLND_CONN_DATA * const conn TSRMLS
 		/* XXX: Do we need to use the internal hash pointer instead of external one? */
 		for (
 				zend_hash_internal_pointer_reset(ht[i]);
-			 	(zend_hash_has_more_elements(ht[i]) == SUCCESS) && (zend_hash_get_current_data(ht[i], (void**)&pool_element) == SUCCESS);
+			 	(zend_hash_has_more_elements(ht[i]) == SUCCESS) && (mms_hash_get_current_data(ht[i], (void**)&pool_element) == SUCCESS);
 				zend_hash_move_forward(ht[i])
 			)
 		{
@@ -707,7 +709,7 @@ pool_free_reference(MYSQLND_MS_POOL * pool, MYSQLND_CONN_DATA * const conn TSRML
 		/* XXX: Do we need to use the internal hash pointer instead of external one? */
 		for (
 				zend_hash_internal_pointer_reset(ht[i]);
-			 	(zend_hash_has_more_elements(ht[i]) == SUCCESS) && (zend_hash_get_current_data(ht[i], (void**)&pool_element) == SUCCESS);
+			 	(zend_hash_has_more_elements(ht[i]) == SUCCESS) && (mms_hash_get_current_data(ht[i], (void**)&pool_element) == SUCCESS);
 				zend_hash_move_forward(ht[i])
 			)
 		{
@@ -1420,8 +1422,8 @@ mysqlnd_ms_pool_ctor(llist_dtor_func_t ms_list_data_dtor, zend_bool persistent T
 		/* Our own dtor's will call the MS provided dtor on demand */
 		pool->data.ms_list_data_dtor = ms_list_data_dtor;
 
-		zend_hash_init(&(pool->data.master_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent);
-		zend_hash_init(&(pool->data.slave_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent);
+		mms_hash_init(&(pool->data.master_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent);
+		mms_hash_init(&(pool->data.slave_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent);
 
 		zend_llist_init(&(pool->data.active_master_list), sizeof(MYSQLND_MS_LIST_DATA *), NULL, persistent);
 		zend_llist_init(&(pool->data.active_slave_list), sizeof(MYSQLND_MS_LIST_DATA *), NULL, persistent);

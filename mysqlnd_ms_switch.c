@@ -78,8 +78,10 @@ static const struct st_specific_ctor_with_name specific_ctors[] =
 {
 	{PICK_RROBIN,		sizeof(PICK_RROBIN) - 1,		mysqlnd_ms_rr_filter_ctor,		SERVER_PICK_RROBIN,		FALSE},
 	{PICK_RANDOM,		sizeof(PICK_RANDOM) - 1,		mysqlnd_ms_random_filter_ctor,	SERVER_PICK_RANDOM,		FALSE},
-//	{PICK_USER,			sizeof(PICK_USER) - 1,			mysqlnd_ms_user_filter_ctor,	SERVER_PICK_USER,		FALSE},
+#if A0
+	{PICK_USER,			sizeof(PICK_USER) - 1,			mysqlnd_ms_user_filter_ctor,	SERVER_PICK_USER,		FALSE},
 	{PICK_USER_MULTI,	sizeof(PICK_USER_MULTI) - 1,	mysqlnd_ms_user_filter_ctor,	SERVER_PICK_USER_MULTI,	TRUE},
+#endif
 #ifdef MYSQLND_MS_HAVE_FILTER_TABLE_PARTITION
 	{PICK_TABLE,		sizeof(PICK_TABLE) - 1,			mysqlnd_ms_table_filter_ctor,	SERVER_PICK_TABLE,		TRUE},
 #endif
@@ -747,6 +749,7 @@ mysqlnd_ms_pick_server_ex(MYSQLND_CONN_DATA * conn, char ** query, size_t * quer
 			}
 
 			switch (filter->pick_type) {
+#ifdef A0
 				case SERVER_PICK_USER:
 					connection = mysqlnd_ms_user_pick_server(filter, (*conn_data)->connect_host, (const char * const)*query, *query_len,
 															 selected_masters, selected_slaves, stgy,
@@ -764,6 +767,8 @@ mysqlnd_ms_pick_server_ex(MYSQLND_CONN_DATA * conn, char ** query, size_t * quer
 														 output_masters, output_slaves, stgy,
 														 &MYSQLND_MS_ERROR_INFO(conn) TSRMLS_CC);
 					break;
+#endif
+
 #ifdef MYSQLND_MS_HAVE_FILTER_TABLE_PARTITION
 				case SERVER_PICK_TABLE:
 					if (FALSE == stgy->trx_stop_switching) {

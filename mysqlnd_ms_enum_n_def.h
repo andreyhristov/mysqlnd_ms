@@ -777,10 +777,14 @@ typedef struct st_mysqlnd_ms_conn_data
 		zend_bool report_error;
 	} global_trx;
 #endif
+#ifdef A0
 	mysqlnd_fabric *fabric;
+#endif
 
+#ifdef A0
 	/* TODO XA: proxy connection only */
 	MYSQLND_MS_XA_TRX *xa_trx;
+#endif
 
 } MYSQLND_MS_CONN_DATA;
 

@@ -36,21 +36,21 @@
 
 
 /* {{{ mysqlnd_ms_pool_all_list_dtor */
-void
-mysqlnd_ms_pool_all_list_dtor(void * pDest)
+static void
+mysqlnd_ms_pool_all_list_dtor(zval * pDest)
 {
-	MYSQLND_MS_POOL_ENTRY * element = pDest? *(MYSQLND_MS_POOL_ENTRY **) pDest : NULL;
+	MYSQLND_MS_POOL_ENTRY * element = pDest? (MYSQLND_MS_POOL_ENTRY *) Z_PTR_P(pDest) : NULL;
 	TSRMLS_FETCH();
 
 	DBG_ENTER("mysqlnd_ms_pool_all_list_dtor");
 
-	if (!element) {
-		DBG_VOID_RETURN;
+	if (element) {
+		ZVAL_NULL(pDest);
+		if (element->ms_list_data_dtor) {
+			element->ms_list_data_dtor((void *)&element->data);
+		}
+		mnd_pefree(element, element->persistent);
 	}
-	if (element->ms_list_data_dtor) {
-		element->ms_list_data_dtor((void *)&element->data);
-	}
-	mnd_pefree(element, element->persistent);
 
 	DBG_VOID_RETURN;
 }
@@ -480,7 +480,7 @@ pool_connection_exists(MYSQLND_MS_POOL * pool, smart_string * hash_key,
 		*data = (*pool_element)->data;
 		ret = TRUE;
 		DBG_INF_FMT("element=%p list=%p is_master=%d", *pool_element, &(pool->data.master_list), *is_master);
-	} else if (SUCCESS == nms_hash_find(&(pool->data.slave_list), hash_key->c, hash_key->len, (void**)&pool_element)) {
+	} else if (SUCCESS == mms_hash_find(&(pool->data.slave_list), hash_key->c, hash_key->len, (void**)&pool_element)) {
 		*is_master = FALSE;
 		*is_active = (*pool_element)->active;
 		*is_removed = (*pool_element)->removed;
@@ -963,7 +963,7 @@ zend_bool pool_client_option_is_char(enum_mysqlnd_option option) {
 
 /* {{{ buffer_search_client_option */
 static
-zend_bool buffer_search_client_option(MYSQLND_MS_POOL_CMD * pool_cmd, void * arg1, void * arg2 TSRMLS_DC)
+zend_bool buffer_search_client_option(const MYSQLND_MS_POOL_CMD * pool_cmd, void * arg1, void * arg2 TSRMLS_DC)
 {
 	MYSQLND_MS_POOL_CMD_SET_CLIENT_OPTION  * cmd_data;
 	DBG_ENTER("buffer_search_client_option");
@@ -1422,8 +1422,8 @@ mysqlnd_ms_pool_ctor(llist_dtor_func_t ms_list_data_dtor, zend_bool persistent T
 		/* Our own dtor's will call the MS provided dtor on demand */
 		pool->data.ms_list_data_dtor = ms_list_data_dtor;
 
-		mms_hash_init(&(pool->data.master_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent);
-		mms_hash_init(&(pool->data.slave_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent);
+		mms_hash_init(&(pool->data.master_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent); /* mysqlnd_ms_pool_all_list_dtor inspected */
+		mms_hash_init(&(pool->data.slave_list), 4, NULL, mysqlnd_ms_pool_all_list_dtor, persistent); /* mysqlnd_ms_pool_all_list_dtor inspected */
 
 		zend_llist_init(&(pool->data.active_master_list), sizeof(MYSQLND_MS_LIST_DATA *), NULL, persistent);
 		zend_llist_init(&(pool->data.active_slave_list), sizeof(MYSQLND_MS_LIST_DATA *), NULL, persistent);

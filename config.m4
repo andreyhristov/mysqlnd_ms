@@ -24,12 +24,12 @@ if test "$PHP_MYSQLND_MS" && test "$PHP_MYSQLND_MS" != "no"; then
 				  mysqlnd_ms_hash.c \
                   mysqlnd_ms_filter_random.c mysqlnd_ms_filter_round_robin.c \
 				  mysqlnd_ms_filter_qos.c \
+                  mysqlnd_ms_config_json.c \
                   mysqlnd_ms_lb_weights.c mysqlnd_ms_filter_groups.c \
-                  mysqlnd_ms_xa.c mysqlnd_ms_xa_store_mysql.c \
                   mysqlnd_ms_conn_pool.c"
 
-#                  mysqlnd_ms_config_json.c \
 #                  mysqlnd_ms_filter_user.c \
+#                  mysqlnd_ms_xa.c mysqlnd_ms_xa_store_mysql.c \
 
 #                  fabric/mysqlnd_fabric.c fabric/mysqlnd_fabric_parse_xml.c \
 #                  fabric/mysqlnd_fabric_strategy_direct.c \

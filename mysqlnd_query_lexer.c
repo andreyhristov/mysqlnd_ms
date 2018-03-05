@@ -9571,22 +9571,25 @@ mysqlnd_qp_get_token(struct st_mysqlnd_query_scanner * scanner TSRMLS_DC)
 	DBG_ENTER("mysqlnd_qp_get_token");
 
 	memset(&lex_val, 0, sizeof(lex_val));
-	INIT_ZVAL(lex_val.zv);
+	ZVAL_NULL(&lex_val.zv);
 	/* mysqlnd_qp_lex expects `yyscan_t`, not `yyscan_t*` */
 	if ((ret.token = mysqlnd_qp_lex(&lex_val,*(yyscan_t *)scanner->scanner TSRMLS_CC))) {
 		DBG_INF_FMT("token=%d", ret.token);
 		switch (Z_TYPE(lex_val.zv)) {
 			case IS_STRING:
 				DBG_INF_FMT("strval=%s", Z_STRVAL(lex_val.zv));
-				ret.value = lex_val.zv;
+				ZVAL_COPY_VALUE(&ret.value, &lex_val.zv);
+//				ret.value = lex_val.zv;
 				break;
 			case IS_LONG:
 				DBG_INF_FMT("lval=%ld", Z_LVAL(lex_val.zv));
-				ret.value = lex_val.zv;
+				ZVAL_COPY_VALUE(&ret.value, &lex_val.zv);
+//				ret.value = lex_val.zv;
 				break;
 			case IS_DOUBLE:
 				DBG_INF_FMT("dval=%f", Z_DVAL(lex_val.zv));
-				ret.value = lex_val.zv;
+				ZVAL_COPY_VALUE(&ret.value, &lex_val.zv);
+//				ret.value = lex_val.zv;
 				break;
 			case IS_NULL:
 				if (lex_val.kn) {

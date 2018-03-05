@@ -133,9 +133,9 @@ PHP_GINIT_FUNCTION(mysqlnd_ms) {
 PHP_RINIT_FUNCTION(mysqlnd_ms)
 {
 	if (MYSQLND_MS_G(enable)) {
-
+#ifdef A0
 		mms_hash_init(&MYSQLND_MS_G(xa_state_stores), 0, NULL, mysqlnd_ms_xa_gc_hash_dtor, 1);
-
+#endif
 		MYSQLND_MS_CONFIG_JSON_LOCK(mysqlnd_ms_json_config);
 		if (FALSE == mysqlnd_ms_global_config_loaded) {
 			mysqlnd_ms_config_json_load_configuration(mysqlnd_ms_json_config TSRMLS_CC);
@@ -688,6 +688,7 @@ static PHP_FUNCTION(mysqlnd_ms_get_stats)
 }
 /* }}} */
 
+#if A0
 static void mysqlnd_ms_fabric_select_servers(zval *return_value, zval *conn_zv, char *table, char *key, enum mysqlnd_fabric_hint hint TSRMLS_DC) /* {{{ */
 {
 	MYSQLND *proxy_conn;
@@ -865,43 +866,44 @@ static PHP_FUNCTION(mysqlnd_ms_fabric_select_global)
 }
 /* }}} */
 
+#endif /* A0 */
+
 static void mysqlnd_ms_add_server_to_array(void *data, void *arg TSRMLS_DC) /* {{{ */
 {
-	zval *host;
+	zval host;
 	MYSQLND_MS_LIST_DATA **element = (MYSQLND_MS_LIST_DATA **)data;
 	zval *array = (zval *)arg;
 
-	MAKE_STD_ZVAL(host);
-	array_init(host);
+	array_init(&host);
 	if ((*element)->name_from_config) {
-		add_assoc_string(host, "name_from_config", (*element)->name_from_config);
+		add_assoc_string(&host, "name_from_config", (*element)->name_from_config);
 	} else {
-		add_assoc_null(host, "name_from_config");
+		add_assoc_null(&host, "name_from_config");
 	}
 
-	add_assoc_string(host, "hostname", (*element)->host);
+	add_assoc_string(&host, "hostname", (*element)->host);
 
 	if ((*element)->user) {
-		add_assoc_string(host, "user", (*element)->user);
+		add_assoc_string(&host, "user", (*element)->user);
 	} else {
-		add_assoc_null(host, "user");
+		add_assoc_null(&host, "user");
 	}
 
-	add_assoc_long(host, "port", (*element)->port);
+	add_assoc_long(&host, "port", (*element)->port);
 
 	if ((*element)->socket) {
-		add_assoc_string(host, "socket", (*element)->socket);
+		add_assoc_string(&host, "socket", (*element)->socket);
 	} else {
-		add_assoc_null(host, "socket");
+		add_assoc_null(&host, "socket");
 	}
-
-	add_next_index_zval(array, host);
 
 	if (((*element)->conn) && (CONN_GET_STATE((*element)->conn) > CONN_ALLOCED)) {
-		add_assoc_long(host, "thread_id", (*element)->conn->thread_id);
+		add_assoc_long(&host, "thread_id", (*element)->conn->thread_id);
 	} else {
-		add_assoc_null(host, "thread_id");
+		add_assoc_null(&host, "thread_id");
 	}
+
+	add_next_index_zval(array, &host);
 }
 /* }}} */
 
@@ -913,7 +915,7 @@ ZEND_END_ARG_INFO()
    Dump configured master and slave servers */
 static PHP_FUNCTION(mysqlnd_ms_dump_servers)
 {
-	zval *conn_zv, *masters, *slaves;
+	zval *conn_zv, masters, slaves;
 	MYSQLND *conn;
 	MYSQLND_MS_CONN_DATA **conn_data = NULL;
 
@@ -930,32 +932,29 @@ static PHP_FUNCTION(mysqlnd_ms_dump_servers)
 		php_error_docref(NULL TSRMLS_CC, E_WARNING, MYSQLND_MS_ERROR_PREFIX " No mysqlnd_ms connection");
 		RETURN_FALSE;
 	}
-
-	MAKE_STD_ZVAL(masters);
-	MAKE_STD_ZVAL(slaves);
-	array_init(masters);
-	array_init(slaves);
+	array_init(&masters);
+	array_init(&slaves);
 
 	zend_llist_apply_with_argument((*conn_data)->pool->get_active_masters((*conn_data)->pool TSRMLS_CC),
-								   mysqlnd_ms_add_server_to_array, masters TSRMLS_CC);
+								   mysqlnd_ms_add_server_to_array, &masters TSRMLS_CC);
 	zend_llist_apply_with_argument((*conn_data)->pool->get_active_slaves((*conn_data)->pool TSRMLS_CC),
-								   mysqlnd_ms_add_server_to_array, slaves TSRMLS_CC);
+								   mysqlnd_ms_add_server_to_array, &slaves TSRMLS_CC);
 
 	array_init(return_value);
-	add_assoc_zval(return_value, "masters", masters);
-	add_assoc_zval(return_value, "slaves", slaves);
+	add_assoc_zval(return_value, "masters", &masters);
+	add_assoc_zval(return_value, "slaves", &slaves);
 }
 /* }}} */
 
+#if A0
 static void mysqlnd_ms_dump_fabric_hosts_cb(const char *url, void *data) /* {{{ */
 {
-	zval *item;
+	zval item;
 	zval *return_value = (zval*)data;
 
-	MAKE_STD_ZVAL(item);
-	array_init(item);
-	add_assoc_string(item, "url", (char*) url);
-	add_next_index_zval(return_value,  item);
+	array_init(&item);
+	add_assoc_string(&item, "url", (char*) url);
+	add_next_index_zval(return_value,  &item);
 }
 /* }}} */
 
@@ -990,7 +989,9 @@ static PHP_FUNCTION(mysqlnd_ms_dump_fabric_rpc_hosts)
 	mysqlnd_fabric_host_list_apply((*conn_data)->fabric, mysqlnd_ms_dump_fabric_hosts_cb, return_value);
 }
 /* }}} */
+#endif
 
+#ifdef A0
 #ifdef PHP_DEBUG
 /* {{{ proto void mysqlnd_ms_debug_set_fabric_raw_dump_data_xml(mixed connection, string shard_table, string shard_mapping_xml, string shard_index, string server)
    Set raw binary dump data for Fabric using XML. This is supposed to be used by testing
@@ -1076,7 +1077,11 @@ static PHP_FUNCTION(mysqlnd_ms_debug_set_fabric_raw_dump_data_dangerous)
 	fabric_set_raw_data((*conn_data)->fabric, data, data_len);
 }
 /* }}} */
-#endif
+#endif /* PHP_DEBUG */
+
+#endif /* A0 */
+
+#if A0
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_mysqlnd_ms_xa_begin, 0, 0, 2)
 	ZEND_ARG_INFO(0, connection)
@@ -1274,6 +1279,8 @@ static PHP_FUNCTION(mysqlnd_ms_xa_gc)
 	RETURN_TRUE;
 }
 /* }}} */
+#endif /* A0 */
+
 
 #ifdef ULF_0
 /* {{{ proto book mysqlnd_ms_swim() */
@@ -1344,18 +1351,25 @@ static const zend_function_entry mysqlnd_ms_functions[] = {
 	PHP_FE(mysqlnd_ms_get_last_gtid,	arginfo_mysqlnd_ms_get_last_gtid)
 	PHP_FE(mysqlnd_ms_set_qos,	arginfo_mysqlnd_ms_set_qos)
 #endif
+#if A0
 	PHP_FE(mysqlnd_ms_fabric_select_shard, arginfo_mysqlnd_ms_fabric_select_shard)
 	PHP_FE(mysqlnd_ms_fabric_select_global, arginfo_mysqlnd_ms_fabric_select_global)
+#endif
+
 	PHP_FE(mysqlnd_ms_dump_servers, arginfo_mysqlnd_ms_dump_servers)
+#if A0
 	PHP_FE(mysqlnd_ms_dump_fabric_rpc_hosts, arginfo_mysqlnd_ms_dump_servers)
 #ifdef PHP_DEBUG
 	PHP_FE(mysqlnd_ms_debug_set_fabric_raw_dump_data_xml, NULL)
 	PHP_FE(mysqlnd_ms_debug_set_fabric_raw_dump_data_dangerous, NULL)
 #endif
+#endif
+#if A0
 	PHP_FE(mysqlnd_ms_xa_begin, arginfo_mysqlnd_ms_xa_begin)
 	PHP_FE(mysqlnd_ms_xa_commit, arginfo_mysqlnd_ms_xa_commit)
 	PHP_FE(mysqlnd_ms_xa_rollback, arginfo_mysqlnd_ms_xa_rollback)
 	PHP_FE(mysqlnd_ms_xa_gc, arginfo_mysqlnd_ms_xa_gc)
+#endif
 #ifdef ULF_0
 	PHP_FE(mysqlnd_ms_swim, NULL)
 #endif

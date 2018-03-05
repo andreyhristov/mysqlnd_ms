@@ -897,15 +897,19 @@ mysqlnd_ms_init_without_fabric(struct st_mysqlnd_ms_config_json_entry * the_sect
 		DBG_RETURN(FAIL);
 	}
 	mysqlnd_ms_lb_strategy_setup(&conn_data->stgy, the_section, &MYSQLND_MS_ERROR_INFO(conn), conn->persistent TSRMLS_CC);
+#ifdef A0
 	conn_data->fabric = NULL;
+#endif
 
-
+#ifdef A0
 	mysqlnd_ms_load_xa_config(the_section, conn_data->xa_trx, &MYSQLND_MS_ERROR_INFO(conn), conn->persistent TSRMLS_CC);
+#endif
 
 	DBG_RETURN(ret);
 }
 /* }}} */
 
+#if A0
 static enum_func_status
 mysqlnd_ms_init_with_fabric(struct st_mysqlnd_ms_config_json_entry * group_section, MYSQLND_CONN_DATA * conn, MYSQLND_MS_CONN_DATA *conn_data TSRMLS_DC)
 {
@@ -1046,8 +1050,13 @@ mysqlnd_ms_init_with_fabric(struct st_mysqlnd_ms_config_json_entry * group_secti
 
 	return SUCCESS;
 }
+#endif
 
-static void mysqlnd_ms_filter_notify_pool_update(MYSQLND_MS_POOL * pool, void * data TSRMLS_DC) {
+
+/* {{{ mysqlnd_ms_filter_notify_pool_update */
+static void
+mysqlnd_ms_filter_notify_pool_update(MYSQLND_MS_POOL * pool, void * data TSRMLS_DC)
+{
 	DBG_ENTER("mysqlnd_ms_filter_notify_pool_update");
 	if (data) {
 		MYSQLND_CONN_DATA * conn = (MYSQLND_CONN_DATA *)data;
@@ -1080,6 +1089,7 @@ static void mysqlnd_ms_filter_notify_pool_update(MYSQLND_MS_POOL * pool, void * 
 	}
 	DBG_VOID_RETURN;
 }
+/* }}} */
 
 
 /* {{{ mysqlnd_ms::connect */
@@ -1169,7 +1179,9 @@ MYSQLND_METHOD(mysqlnd_ms, connect)(MYSQLND_CONN_DATA * conn,
 #ifndef MYSQLND_HAS_INJECTION_FEATURE
 		mysqlnd_ms_init_trx_to_null(&(*conn_data)->global_trx TSRMLS_CC);
 #endif
+#ifdef A0
 		(*conn_data)->xa_trx = mysqlnd_ms_xa_proxy_conn_init(host, host_len, conn->persistent TSRMLS_CC);
+#endif
 		(*conn_data)->initialized = TRUE;
 
 		if (!hotloading) {
@@ -1178,9 +1190,13 @@ MYSQLND_METHOD(mysqlnd_ms, connect)(MYSQLND_CONN_DATA * conn,
 
 		the_section = mysqlnd_ms_config_json_section(mysqlnd_ms_json_config, host, host_len, &value_exists TSRMLS_CC);
 
+#if A0
 		if (mysqlnd_ms_config_json_sub_section_exists(the_section, SECT_FABRIC_NAME, sizeof(SECT_FABRIC_NAME)-1, 0 TSRMLS_CC)) {
 			ret = mysqlnd_ms_init_with_fabric(the_section, conn, *conn_data TSRMLS_CC);
-		} else {
+		} else
+#endif
+		{
+
 			ret = mysqlnd_ms_init_without_fabric(the_section, conn, *conn_data, host TSRMLS_CC);
 		}
 
@@ -1276,10 +1292,12 @@ MYSQLND_METHOD(mysqlnd_ms, query)(MYSQLND_CONN_DATA * conn, const char * query, 
 		DBG_RETURN(ret);
 	}
 
+#ifdef A0
 	ret = mysqlnd_ms_xa_inject_query(conn, connection, switched_servers TSRMLS_CC);
 	if (FAIL == ret) {
 		DBG_RETURN(ret);
 	}
+#endif
 
 #ifdef ALL_SERVER_DISPATCH
 	if (use_all) {
@@ -1486,14 +1504,17 @@ mysqlnd_ms_conn_free_plugin_data(MYSQLND_CONN_DATA * conn TSRMLS_DC)
 		if (TRANSIENT_ERROR_STRATEGY_ON == (*data_pp)->stgy.transient_error_strategy) {
 			zend_llist_clean(&((*data_pp)->stgy.transient_error_codes));
 		}
-
+#ifdef A0
 		if ((*data_pp)->fabric) {
 			mysqlnd_fabric_free((*data_pp)->fabric);
 		}
+#endif
 
+#ifdef A0
 		if ((*data_pp)->xa_trx) {
 			mysqlnd_ms_xa_proxy_conn_free((*data_pp), conn->persistent TSRMLS_CC);
 		}
+#endif
 
 		/* XA is using the pool */
 		if ((*data_pp)->pool) {
@@ -1714,7 +1735,6 @@ MYSQLND_METHOD(mysqlnd_ms, kill)(MYSQLND_CONN_DATA * proxy_conn, unsigned int pi
 /* }}} */
 
 
-#if 0
 /* {{{ mysqlnd_ms::get_errors */
 static zval *
 MYSQLND_METHOD(mysqlnd_ms, get_errors)(MYSQLND_CONN_DATA * const proxy_conn, const char * const db, unsigned int db_len TSRMLS_DC)
@@ -1729,7 +1749,7 @@ MYSQLND_METHOD(mysqlnd_ms, get_errors)(MYSQLND_CONN_DATA * const proxy_conn, con
 		BEGIN_ITERATE_OVER_SERVER_LISTS(el, (*conn_data)->pool->get_active_masters((*conn_data)->pool TSRMLS_CC), (*conn_data)->pool->get_active_slaves((*conn_data)->pool TSRMLS_CC));
 		{
 			MS_DECLARE_AND_LOAD_CONN_DATA(el_conn_data, el->conn);
-			zval * row = NULL;
+			zval row;
 			char * scheme;
 			size_t scheme_len;
 
@@ -1744,17 +1764,17 @@ MYSQLND_METHOD(mysqlnd_ms, get_errors)(MYSQLND_CONN_DATA * const proxy_conn, con
 				scheme = el->conn->scheme;
 				scheme_len = el->conn->scheme_len;
 			}
-			array_init(row);
-			add_assoc_long_ex(row, "errno", sizeof("errno") - 1, MS_CALL_ORIGINAL_CONN_DATA_METHOD(get_error_no)(el->conn TSRMLS_CC));
+			array_init(&row);
+			add_assoc_long_ex(&row, "errno", sizeof("errno") - 1, MS_CALL_ORIGINAL_CONN_DATA_METHOD(get_error_no)(el->conn TSRMLS_CC));
 			{
 				const char * err = MS_CALL_ORIGINAL_CONN_DATA_METHOD(get_error_str)(el->conn TSRMLS_CC);
-				add_assoc_stringl_ex(row, "error", sizeof("error") - 1, (char*) err, strlen(err), 1 /*dup*/);
+				add_assoc_stringl_ex(&row, "error", sizeof("error") - 1, (char*) err, strlen(err));
 			}
 			{
 				const char * sqlstate = MS_CALL_ORIGINAL_CONN_DATA_METHOD(get_sqlstate)(el->conn TSRMLS_CC);
-				add_assoc_stringl_ex(row, "sqlstate", sizeof("sqlstate") - 1, (char*) sqlstate, strlen(sqlstate), 1 /*dup*/);
+				add_assoc_stringl_ex(&row, "sqlstate", sizeof("sqlstate") - 1, (char*) sqlstate, strlen(sqlstate));
 			}
-			add_assoc_zval_ex(ret, scheme, scheme_len, row);
+			add_assoc_zval_ex(ret, scheme, scheme_len, &row);
 
 			if (el_conn_data && *el_conn_data) {
 				(*el_conn_data)->skip_ms_calls = FALSE;
@@ -1766,7 +1786,6 @@ MYSQLND_METHOD(mysqlnd_ms, get_errors)(MYSQLND_CONN_DATA * const proxy_conn, con
 	DBG_RETURN(ret);
 }
 /* }}} */
-#endif
 
 
 /* {{{ mysqlnd_ms::select_db */
@@ -2873,8 +2892,10 @@ MYSQLND_METHOD(mysqlnd_ms, close)(MYSQLND * conn, enum_connection_close_type clo
 
 	DBG_INF_FMT("Using thread "MYSQLND_LLU_SPEC, MS_GET_CONN_DATA_FROM_CONN(conn)->thread_id);
 
+#ifdef A0
 	/* Let XA check for unfinished global transactions */
 	ret = mysqlnd_ms_xa_conn_close(MS_GET_CONN_DATA_FROM_CONN(conn) TSRMLS_CC);
+#endif
 	/*
 	  Force cleaning of the master and slave lists.
 	  In the master list this connection is present and free_reference will be called, and later

@@ -21,7 +21,7 @@
 
 #define mms_hash_init(ht, nSize, pHashFunction, pDestructor, persistent)	_mms_hash_init((ht), (nSize), (dtor_func_t) (pDestructor), (persistent) ZEND_FILE_LINE_CC)
 #define mms_hash_add(ht, arKey, nKeyLength, pData, nDataSize, pDest)		_mms_hash_add(ht, arKey, nKeyLength, pData ZEND_FILE_LINE_CC)
-#define mms_hash_update(ht, arKey, nKeyLength, pData, nDataSize, pDest)		_mss_hash_update(ht, arKey, nKeyLength, pData ZEND_FILE_LINE_CC)
+#define mms_hash_update(ht, arKey, nKeyLength, pData, nDataSize, pDest)		_mms_hash_update(ht, arKey, nKeyLength, pData ZEND_FILE_LINE_CC)
 #define mms_hash_exists(ht, arKey, nKeyLength)								zend_hash_str_exists(ht, arKey, nKeyLength)
 #define mms_hash_sort(ht, sort_func, compare_func, renumber)				zend_hash_sort(ht, compare_func, renumber)
 #define mms_hash_get_current_key_ex(ht, str_index, str_length, num_index, duplicate, pos) _mms_hash_get_current_key_ex(ht, str_index, str_length, num_index, pos)

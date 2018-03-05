@@ -688,9 +688,9 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 {
 	enum_func_status ret = FAIL, ok;
 	/* SELECT bqual, scheme, host, port, socket, user, password, state, health */
-	zval **bqual = NULL, **scheme, **host, **port, **socket, **user, **password, **state, **health;
-	zval *xa_recover_list, **pprow;
-	zval **format_id, **bqual_length, **gtrid_length, **data;
+	zval *bqual = NULL, *scheme, *host, *port, *socket, *user, *password, *state, *health;
+	zval **pprow;
+	zval *format_id, *bqual_length, *gtrid_length, *data;
 	char * sql, *tmp;
 	int sql_len, tmp_len;
 	uint64_t num_rows;
@@ -716,15 +716,15 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 		GET_ZVAL_STRING_FROM_HASH(pprow, password);
 		GET_ZVAL_STRING_FROM_HASH(pprow, state);
 		GET_ZVAL_STRING_FROM_HASH(pprow, health);
-		DBG_INF_FMT("Checking store_trx_id=%d, bqual=%d, state=%s, health=%s", Z_LVAL_P(*store_trx_id), Z_LVAL_P(*bqual), Z_STRVAL_P(*state), Z_STRVAL_P(*health));
+		DBG_INF_FMT("Checking store_trx_id=%d, bqual=%d, state=%s, health=%s", Z_LVAL_P(*store_trx_id), Z_LVAL_P(bqual), Z_STRVAL_P(state), Z_STRVAL_P(health));
 
-		if (!strncasecmp(Z_STRVAL_P(*state), "XA_NON_EXISTING", Z_STRLEN_P(*state))) {
+		if (!strncasecmp(Z_STRVAL_P(state), "XA_NON_EXISTING", Z_STRLEN_P(state))) {
 		  DBG_INF("No action has been carried out on the participant");
 		  continue;
 		}
 
-		if (strncasecmp(Z_STRVAL_P(*health), "OK", Z_STRLEN_P(*health)) &&
-			strncasecmp(Z_STRVAL_P(*state), "XA_PREPARED", Z_STRLEN_P(*state))) {
+		if (strncasecmp(Z_STRVAL_P(health), "OK", Z_STRLEN_P(health)) &&
+			strncasecmp(Z_STRVAL_P(state), "XA_PREPARED", Z_STRLEN_P(state))) {
 			/*
 			 * Failed client or server and a XA trx for which is either:
 			 *
@@ -735,7 +735,7 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 			sql_len = spprintf(&sql, 0, "UPDATE %s SET health = 'GC_DONE' WHERE fk_store_trx_id = %d AND bqual = %d",
 							store_data->participant_table,
 							(int)Z_LVAL_P(*store_trx_id),
-							(int)Z_LVAL_P(*bqual));
+							(int)Z_LVAL_P(bqual));
 			ok = mysqlnd_query(store_data->conn, sql, sql_len);
 			efree(sql);
 			if (PASS != ok) {
@@ -758,17 +758,17 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 		 * wait for it to die.
 		 */
 
-		if (((Z_STRLEN_P(*scheme) > sizeof("tcp://")) && !memcmp(Z_STRVAL_P(*scheme), "tcp://", sizeof("tcp://") - 1)) ||
-			((Z_STRLEN_P(*scheme) > sizeof("unix://")) && !memcmp(Z_STRVAL_P(*scheme), "unix://", sizeof("unix://") - 1))) {
+		if (((Z_STRLEN_P(scheme) > sizeof("tcp://")) && !memcmp(Z_STRVAL_P(scheme), "tcp://", sizeof("tcp://") - 1)) ||
+			((Z_STRLEN_P(scheme) > sizeof("unix://")) && !memcmp(Z_STRVAL_P(scheme), "unix://", sizeof("unix://") - 1))) {
 
 			MYSQLND * conn = mysqlnd_init(MYSQLND_CLIENT_NO_FLAG, FALSE);
 			if (mysqlnd_connect(conn,
-							Z_STRVAL_P(*host),
-							Z_STRLEN_P(*user) ? Z_STRVAL_P(*user) : store_data->user,
-							Z_STRLEN_P(*password) ? Z_STRVAL_P(*password) : store_data->password,
-							Z_STRLEN_P(*password) ? Z_STRLEN_P(*password) : store_data->password_len,
+							Z_STRVAL_P(host),
+							Z_STRLEN_P(user) ? Z_STRVAL_P(user) : store_data->user,
+							Z_STRLEN_P(password) ? Z_STRVAL_P(password) : store_data->password,
+							Z_STRLEN_P(password) ? Z_STRLEN_P(password) : store_data->password_len,
 							store_data->db, store_data->db_len,
-							(unsigned int)Z_LVAL_P(*port),
+							(unsigned int)Z_LVAL_P(port),
 							NULL /* socket */, 0 /* flags */,
 							MYSQLND_CLIENT_NO_FLAG TSRMLS_CC) == NULL) {
 				COPY_SQL_ERROR(conn, error_info);
@@ -821,7 +821,7 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 				 * We should be able to find out running XA START.
 				 */
 				ok = PASS;
-				if (!strncasecmp(Z_STRVAL_P(*health), "OK", Z_STRLEN_P(*health))) {
+				if (!strncasecmp(Z_STRVAL_P(health), "OK", Z_STRLEN_P(health))) {
 					sql_len = spprintf(&sql, 0, "XA START '%d'", xa_id->gtrid);
 					ok = mysqlnd_query(conn, sql, sql_len);
 					efree(sql);
@@ -843,7 +843,7 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 					sql_len = spprintf(&sql, 0, "UPDATE %s SET health = 'GC_DONE' WHERE fk_store_trx_id = %d AND bqual = %d",
 									store_data->participant_table,
 									(int)Z_LVAL_P(*store_trx_id),
-									(int)Z_LVAL_P(*bqual));
+									(int)Z_LVAL_P(bqual));
 					ok = mysqlnd_query(store_data->conn, sql, sql_len);
 					efree(sql);
 					if (PASS != ok) {
@@ -853,29 +853,27 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 					}
 				}
 			} else {
-
-				MAKE_STD_ZVAL(xa_recover_list);
-				mysqlnd_fetch_all(res, MYSQLND_FETCH_NUM, xa_recover_list);
-				if (Z_TYPE_P(xa_recover_list) != IS_ARRAY) {
+				zval xa_recover_list;
+				mysqlnd_fetch_all(res, MYSQLND_FETCH_NUM, &xa_recover_list);
+				if (Z_TYPE(xa_recover_list) != IS_ARRAY) {
 					mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 									  E_WARNING TSRMLS_CC,
 									  MYSQLND_MS_ERROR_PREFIX " MySQL XA state store error: Garbage collection failed. "
 									  "Failed to fetch results for XA RECOVER");
-					zval_ptr_dtor(&xa_recover_list);
+					zval_dtor(&xa_recover_list);
 					mysqlnd_close(conn, MYSQLND_CLOSE_DISCONNECTED);
 					goto gc_participants_exit;
 				}
 
 				/* The initial version should hardly ever get here.
 			Server must have been shut down between prepare and commit during mysqlnd_ms_xa_commit(). */
-				for (zend_hash_internal_pointer_reset(Z_ARRVAL_P(xa_recover_list));
-					zend_hash_has_more_elements(Z_ARRVAL_P(xa_recover_list)) == SUCCESS;
-					zend_hash_move_forward(Z_ARRVAL_P(xa_recover_list))) {
+				for (zend_hash_internal_pointer_reset(Z_ARRVAL(xa_recover_list));
+					zend_hash_has_more_elements(Z_ARRVAL(xa_recover_list)) == SUCCESS;
+					zend_hash_move_forward(Z_ARRVAL(xa_recover_list))) {
 
-					if ((mms_hash_get_current_data(Z_ARRVAL_P(xa_recover_list), (void **)&pprow) != SUCCESS) ||
-						(Z_TYPE_P(*pprow) != IS_ARRAY)) {
-					continue;
-				}
+					if ((mms_hash_get_current_data(Z_ARRVAL(xa_recover_list), (void **)&pprow) != SUCCESS) || (Z_TYPE_P(*pprow) != IS_ARRAY)) {
+						continue;
+					}
 					zend_hash_internal_pointer_reset(Z_ARRVAL_P(*pprow));
 
 					/*
@@ -895,66 +893,65 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 
 					/* compare data = gtrid with unsigned int xa_id.gtrid */
 					if ((tmp_len = spprintf(&tmp, 0, "%d", xa_id->gtrid)) != 0) {
-						if (!strncasecmp(Z_STRVAL_P(*data), tmp, tmp_len - 1)) {
-						efree(tmp);
-						/* this is ours... */
-						if (must_commit) {
-							DBG_INF("There is at least one participant in XA_COMMIT state, we MUST commit");
-							sql_len = spprintf(&sql, 0, "XA COMMIT '%d'", xa_id->gtrid);
-						} else {
-							DBG_INF("No participant reached XA_COMMIT before, we can and SHOULD rollback");
-							sql_len = spprintf(&sql, 0, "XA ROLLBACK '%d'", xa_id->gtrid);
-						}
-						ok = mysqlnd_query(store_data->conn, sql, sql_len);
-						efree(sql);
-						if (PASS != ok) {
-							if ((!strncasecmp(Z_STRVAL_P(*health), "OK", Z_STRLEN_P(*health))) &&
-								(1399 == mysqlnd_errno(conn))) {
-								/* Possibly a timed out client which is connected to the server still
-								ERROR 1399 (XAE07): XAER_RMFAIL: The command cannot be executed when global transaction is in the  NON-EXISTING state */
-								DBG_INF("This timed out XA trx is still active with state > XA_PREPARED.");
+						if (!strncasecmp(Z_STRVAL_P(data), tmp, tmp_len - 1)) {
+							efree(tmp);
+							/* this is ours... */
+							if (must_commit) {
+								DBG_INF("There is at least one participant in XA_COMMIT state, we MUST commit");
+								sql_len = spprintf(&sql, 0, "XA COMMIT '%d'", xa_id->gtrid);
 							} else {
-								COPY_SQL_ERROR(store_data->conn, error_info);
-								zval_ptr_dtor(&xa_recover_list);
-								mysqlnd_close(conn, MYSQLND_CLOSE_DISCONNECTED);
-								goto gc_participants_exit;
+								DBG_INF("No participant reached XA_COMMIT before, we can and SHOULD rollback");
+								sql_len = spprintf(&sql, 0, "XA ROLLBACK '%d'", xa_id->gtrid);
 							}
-						} else {
-							/* GC done... */
-							sql_len = spprintf(&sql, 0, "UPDATE %s SET health = 'GC_DONE' WHERE fk_store_trx_id = %d AND bqual = %d",
-								store_data->participant_table,
-								(int)Z_LVAL_P(*store_trx_id),
-								(int)Z_LVAL_P(*bqual));
 							ok = mysqlnd_query(store_data->conn, sql, sql_len);
 							efree(sql);
 							if (PASS != ok) {
-								COPY_SQL_ERROR(store_data->conn, error_info);
-								zval_ptr_dtor(&xa_recover_list);
-								mysqlnd_close(conn, MYSQLND_CLOSE_DISCONNECTED);
-								goto gc_participants_exit;
+								if ((!strncasecmp(Z_STRVAL_P(health), "OK", Z_STRLEN_P(health))) &&
+									(1399 == mysqlnd_errno(conn))) {
+									/* Possibly a timed out client which is connected to the server still
+									ERROR 1399 (XAE07): XAER_RMFAIL: The command cannot be executed when global transaction is in the  NON-EXISTING state */
+									DBG_INF("This timed out XA trx is still active with state > XA_PREPARED.");
+								} else {
+									COPY_SQL_ERROR(store_data->conn, error_info);
+									zval_ptr_dtor(&xa_recover_list);
+									mysqlnd_close(conn, MYSQLND_CLOSE_DISCONNECTED);
+									goto gc_participants_exit;
+								}
+							} else {
+								/* GC done... */
+								sql_len = spprintf(&sql, 0, "UPDATE %s SET health = 'GC_DONE' WHERE fk_store_trx_id = %d AND bqual = %d",
+									store_data->participant_table,
+									(int)Z_LVAL_P(*store_trx_id),
+									(int)Z_LVAL_P(bqual));
+								ok = mysqlnd_query(store_data->conn, sql, sql_len);
+								efree(sql);
+								if (PASS != ok) {
+									COPY_SQL_ERROR(store_data->conn, error_info);
+									zval_ptr_dtor(&xa_recover_list);
+									mysqlnd_close(conn, MYSQLND_CLOSE_DISCONNECTED);
+									goto gc_participants_exit;
+								}
 							}
-						}
-					} else {
+						} else {
 							efree(tmp);
 						}
 					}
 				}
-				zval_ptr_dtor(&xa_recover_list);
+				zval_dtor(&xa_recover_list);
 			}
 			mysqlnd_close(conn, MYSQLND_CLOSE_DISCONNECTED);
-
-		} else if (Z_STRLEN_P(*scheme) > sizeof("pipe://") && !memcmp(Z_STRVAL_P(*scheme), "pipe://", sizeof("pipe://") - 1)) {
+		} else if (Z_STRLEN_P(scheme) > sizeof("pipe://") && !memcmp(Z_STRVAL_P(scheme), "pipe://", sizeof("pipe://") - 1)) {
 			/* XA TODO */
 			mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 									  E_WARNING TSRMLS_CC,
 									  MYSQLND_MS_ERROR_PREFIX " MySQL XA state store error: Garbage collection failed. "
-									  "Windows pipe scheme '%s' is not supported yet", Z_STRVAL_P(*scheme));
+									  "Windows pipe scheme '%s' is not supported yet", Z_STRVAL_P(scheme));
 			goto gc_participants_exit;
 		} else {
 			mysqlnd_ms_client_n_php_error(error_info, CR_UNKNOWN_ERROR, UNKNOWN_SQLSTATE,
 									  E_WARNING TSRMLS_CC,
 									  MYSQLND_MS_ERROR_PREFIX " MySQL XA state store error: Garbage collection failed. "
-									  "Unknown scheme '%s'", Z_STRVAL_P(*scheme));
+									  "Unknown scheme '%s'", Z_STRVAL_P(scheme));
 			goto gc_participants_exit;
 		}
 	}
@@ -964,7 +961,7 @@ mysqlnd_ms_xa_store_gc_participants(MYSQLND_MS_XA_STATE_STORE_MYSQL * store_data
 		sql_len = spprintf(&sql, 0, "SELECT bqual FROM %s WHERE health != 'GC_DONE' AND fk_store_trx_id = %d AND bqual = %d LIMIT 1",
 						store_data->participant_table,
 						(int)Z_LVAL_P(*store_trx_id),
-						(int)Z_LVAL_P(*bqual));
+						(int)Z_LVAL_P(bqual));
 		ret = mysqlnd_query(store_data->conn, sql, sql_len);
 		efree(sql);
 		if (PASS != ret) {
